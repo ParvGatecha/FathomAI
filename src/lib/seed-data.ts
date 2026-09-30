@@ -1,17 +1,22 @@
 import { Meeting } from './types';
 
+const NOW = Date.now();
+const HOUR = 1000 * 60 * 60;
+const DAY = HOUR * 24;
+
 export const SEED_MEETINGS: Meeting[] = [
   {
     id: "meet-1",
-    title: "Q3 Product Strategy & AI Copilot Roadmap Review",
-    description: "Quarterly alignment on AI assistant features, latency SLAs, pricing tiers, and beta launch dates.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
-    duration: 2520, // 42 mins (in seconds)
+    title: "Product Strategy Review: Q3 AI Copilot & SLAs",
+    description: "Quarterly alignment on AI assistant features, sub-800ms latency SLAs, and beta customer rollout.",
+    date: new Date(NOW - HOUR * 2).toISOString(), // 2 hours ago (Today)
+    duration: 2520, // 42 mins
     category: "product",
+    meetingType: "Strategy Review",
     platform: "zoom",
-    tags: ["Product", "Roadmap", "AI Assistant", "Strategy", "Q3"],
+    tags: ["Product", "Roadmap", "AI Copilot", "Latency SLA", "Q3"],
     isFavorite: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+    createdAt: new Date(NOW - HOUR * 2).toISOString(),
     speakers: [
       {
         id: "spk-1",
@@ -57,7 +62,7 @@ export const SEED_MEETINGS: Meeting[] = [
             "Marcus confirmed the backend infrastructure will easily handle 10,000 concurrent streaming connections."
           ],
           citations: [
-            { timestamp: 245, quote: "Our P95 latency dropped from 2.4 seconds to 780 milliseconds." },
+            { timestamp: 240, quote: "Our P95 latency dropped from 2.4 seconds to 780 milliseconds." },
             { timestamp: 410, quote: "Redis cache hit rate for transcript chunks is sitting at 91%." }
           ]
         },
@@ -72,18 +77,6 @@ export const SEED_MEETINGS: Meeting[] = [
           citations: [
             { timestamp: 920, quote: "Users want to click any citation chip and jump directly to that exact second." }
           ]
-        },
-        {
-          id: "sec-3",
-          title: "Beta Launch Schedule & Customer Rollout",
-          bullets: [
-            "Closed beta starts August 15th with 50 high-volume enterprise teams.",
-            "Sales team will be trained on the new MEDDIC summary template by August 8th.",
-            "Public product launch scheduled for September 2nd on Product Hunt and TechCrunch."
-          ],
-          citations: [
-            { timestamp: 1450, quote: "We are locking the beta freeze date to August 12th." }
-          ]
         }
       ],
       keyDecisions: [
@@ -94,8 +87,7 @@ export const SEED_MEETINGS: Meeting[] = [
       nextSteps: [
         "Alex to finalize streaming API error recovery handlers by Friday.",
         "Elena to publish updated Figma specs for the Clip Sharing modal.",
-        "Marcus to provision staging environment with load-balanced Redis clusters.",
-        "Sarah to draft customer announcement email for early-access partners."
+        "Marcus to provision staging environment with load-balanced Redis clusters."
       ]
     },
     availableSummaries: {
@@ -112,45 +104,10 @@ export const SEED_MEETINGS: Meeting[] = [
               "Sub-800ms response latency achieved with chunk caching.",
               "10,000 concurrent streaming connections validated."
             ]
-          },
-          {
-            id: "sec-2",
-            title: "Go-to-Market Timeline",
-            bullets: [
-              "Closed beta: August 15th.",
-              "Public launch: September 2nd."
-            ]
           }
         ],
         keyDecisions: ["Approved August 15th beta launch", "Strict 800ms SLA"],
         nextSteps: ["Finalize streaming API", "Publish Figma clip modal specs"]
-      },
-      eng_sprint: {
-        templateId: "eng_sprint",
-        templateName: "Engineering Sprint",
-        headline: "Sprint 42 Goals: Sub-800ms P95 RAG latency, Redis caching layer, and streaming SSE endpoints.",
-        overview: "Detailed architectural breakdown of Sprint 42 deliverables. Marcus and Alex aligned on Redis cluster topology and WebSocket/SSE fallback mechanisms.",
-        sections: [
-          {
-            id: "eng-1",
-            title: "Technical Architecture & Blockers",
-            bullets: [
-              "Chunk embedding index migrated to vector namespace with 512-dim embeddings.",
-              "SSE connection timeouts mitigated with 15s keep-alive heartbeats.",
-              "Zero open blocker bugs on the transcript parser."
-            ]
-          },
-          {
-            id: "eng-2",
-            title: "Performance Metrics & Load Testing",
-            bullets: [
-              "P95 query time: 780ms (exceeding 800ms goal).",
-              "Memory footprint per active meeting session reduced by 30%."
-            ]
-          }
-        ],
-        keyDecisions: ["Use SSE instead of WebSocket for streaming answers", "Deploy Redis 7.2 cluster in us-east-1"],
-        nextSteps: ["Marcus to deploy load testing suite", "Alex to write unit tests for citation token parser"]
       }
     },
     actionItems: [
@@ -180,15 +137,6 @@ export const SEED_MEETINGS: Meeting[] = [
         timestamp: 610,
         priority: "high",
         dueDate: "Aug 6, 2026"
-      },
-      {
-        id: "act-4",
-        text: "Draft customer launch email and schedule partner webinars",
-        assignee: { name: "Sarah Chen", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" },
-        completed: false,
-        timestamp: 1520,
-        priority: "medium",
-        dueDate: "Aug 8, 2026"
       }
     ],
     highlights: [
@@ -209,15 +157,6 @@ export const SEED_MEETINGS: Meeting[] = [
         color: "blue",
         label: "Key Point",
         createdByType: "ai"
-      },
-      {
-        id: "hl-3",
-        startTime: 1445,
-        endTime: 1480,
-        text: "We are locking the closed beta release to August 15th with 50 pilot customers.",
-        color: "purple",
-        label: "Action",
-        createdByType: "user"
       }
     ],
     transcript: [
@@ -260,80 +199,21 @@ export const SEED_MEETINGS: Meeting[] = [
         startTime: 240,
         endTime: 340,
         text: "Exactly. Our P95 latency dropped from 2.4 seconds to 780 milliseconds. When users ask questions like 'What were the action items for Marcus?', the answer streams in virtually instantaneously with exact timestamp citations."
-      },
-      {
-        id: "tr-5",
-        speakerId: "spk-4",
-        speakerName: "Elena Rostova",
-        speakerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Principal Product Designer",
-        startTime: 341,
-        endTime: 480,
-        text: "That latency improvement makes a huge difference in the UI feel. I tested the interactive prototype with 8 participants yesterday. The seamless citation pills allow users to click [04:12] and see the audio scrub directly to that sentence. It builds tremendous trust because they can verify the AI wasn't hallucinating."
-      },
-      {
-        id: "tr-6",
-        speakerId: "spk-1",
-        speakerName: "Sarah Chen",
-        speakerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "VP of Product",
-        startTime: 481,
-        endTime: 620,
-        text: "That's fantastic feedback Elena. How is the clip sharing modal performing in usability tests? Are people easily able to trim 30-second snippets to send into Slack?"
-      },
-      {
-        id: "tr-7",
-        speakerId: "spk-4",
-        speakerName: "Elena Rostova",
-        speakerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Principal Product Designer",
-        startTime: 621,
-        endTime: 810,
-        text: "Yes, the drag-to-select waveform trimmer worked really well. When you select text in the transcript or drag handles on the audio timeline, it automatically generates a clean public share link with a standalone player."
-      },
-      {
-        id: "tr-8",
-        speakerId: "spk-3",
-        speakerName: "Marcus Vance",
-        speakerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Lead Systems Architect",
-        startTime: 811,
-        endTime: 1050,
-        text: "On the public share link security, we generate signed short tokens so people without accounts can watch clips without exposing the full workspace or requiring authentication."
-      },
-      {
-        id: "tr-9",
-        speakerId: "spk-1",
-        speakerName: "Sarah Chen",
-        speakerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "VP of Product",
-        startTime: 1051,
-        endTime: 1440,
-        text: "Great. Now regarding the timeline: we want to lock down our closed beta for August 15th with 50 pilot customers. Let's make sure our templates—especially MEDDIC for sales and Sprint notes for eng—are completely polished."
-      },
-      {
-        id: "tr-10",
-        speakerId: "spk-2",
-        speakerName: "Alex Rivera",
-        speakerAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Head of AI Research",
-        startTime: 1441,
-        endTime: 1520,
-        text: "Sounds great. I'll make sure the prompt templates and citation formatting are locked by Friday."
       }
     ]
   },
   {
     id: "meet-2",
-    title: "Enterprise Discovery Call — Acme Corporation",
+    title: "Customer Discovery — Acme Corporation",
     description: "Initial discovery with Acme Corp VP of Engineering and Procurement lead regarding 450-seat rollout.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), // 18 hours ago
+    date: new Date(NOW - HOUR * 5).toISOString(), // 5 hours ago (Today)
     duration: 1920, // 32 mins
     category: "sales",
+    meetingType: "Customer Discovery",
     platform: "google_meet",
     tags: ["Sales", "Enterprise", "MEDDIC", "Deal", "Acme Corp"],
     isFavorite: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
+    createdAt: new Date(NOW - HOUR * 5).toISOString(),
     speakers: [
       {
         id: "spk-5",
@@ -379,15 +259,6 @@ export const SEED_MEETINGS: Meeting[] = [
             "Economic Buyer: Rachel Green has direct signing authority up to $150k.",
             "Champion: Michael Chang is highly enthusiastic about automated security audit trails."
           ]
-        },
-        {
-          id: "med-3",
-          title: "Decision Criteria (DC) & Process (DP)",
-          bullets: [
-            "SOC2 Type II report and HIPAA compliance required for security signoff.",
-            "Must support custom summary templates for MEDDIC and sprint reviews.",
-            "Decision timeline: 2-week pilot in August, contract execution by September 25th."
-          ]
         }
       ],
       keyDecisions: [
@@ -396,8 +267,7 @@ export const SEED_MEETINGS: Meeting[] = [
       ],
       nextSteps: [
         "David to send security questionnaire responses to Michael Chang.",
-        "Rachel to invite 5 engineering team leads to the onboarding kickoff call on Tuesday.",
-        "David to prepare custom enterprise pilot proposal ($18/seat/mo tier)."
+        "Rachel to invite 5 engineering team leads to the onboarding kickoff call on Tuesday."
       ]
     },
     actionItems: [
@@ -428,15 +298,6 @@ export const SEED_MEETINGS: Meeting[] = [
         text: "We have budget already allocated under our Q3 Developer Productivity budget up to $120k.",
         color: "green",
         label: "Decision",
-        createdByType: "ai"
-      },
-      {
-        id: "hl-5",
-        startTime: 740,
-        endTime: 780,
-        text: "Our main bottleneck is that engineers forget what was agreed upon in architecture reviews.",
-        color: "red",
-        label: "Blocker",
         createdByType: "ai"
       }
     ],
@@ -470,40 +331,21 @@ export const SEED_MEETINGS: Meeting[] = [
         startTime: 180,
         endTime: 230,
         text: "We have budget already allocated under our Q3 Developer Productivity budget up to $120k ARR. If Fathom can automatically generate accurate summaries and let people ask questions with verified timestamp citations, it's a no-brainer."
-      },
-      {
-        id: "tr-14",
-        speakerId: "spk-7",
-        speakerName: "Michael Chang",
-        speakerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Director of InfoSec, Acme Corp",
-        startTime: 231,
-        endTime: 360,
-        text: "From the security perspective, our requirements are strict: we need SOC2 Type II, zero data retention for training foundational models, and strict tenant isolation. Can you confirm your compliance posture?"
-      },
-      {
-        id: "tr-15",
-        speakerId: "spk-5",
-        speakerName: "David Kim",
-        speakerAvatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Strategic Account Executive",
-        startTime: 361,
-        endTime: 450,
-        text: "100% Michael. We are SOC2 Type II certified, GDPR/CCPA compliant, and we have zero-data-retention agreements with our model providers. Your meeting audio and transcripts remain strictly your private property."
       }
     ]
   },
   {
     id: "meet-3",
-    title: "Infrastructure Incident Post-Mortem: DB Latency Spike",
-    description: "Root cause analysis of the 14-minute connection pool exhaustion during peak US traffic.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(), // 1 day ago
-    duration: 1680, // 28 mins
+    title: "Engineering Weekly & Architecture Sync",
+    description: "Weekly review of distributed database routing, read-replicas, and SSE connection pooling.",
+    date: new Date(NOW - DAY * 1 - HOUR * 3).toISOString(), // Yesterday
+    duration: 2160, // 36 mins
     category: "engineering",
+    meetingType: "Architecture Sync",
     platform: "teams",
-    tags: ["Engineering", "Post-Mortem", "Database", "SRE", "P1"],
+    tags: ["Engineering", "Architecture", "Database", "SRE"],
     isFavorite: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(),
+    createdAt: new Date(NOW - DAY * 1 - HOUR * 3).toISOString(),
     speakers: [
       {
         id: "spk-3",
@@ -529,59 +371,47 @@ export const SEED_MEETINGS: Meeting[] = [
     ],
     summary: {
       templateId: "eng_sprint",
-      templateName: "Engineering Post-Mortem",
-      headline: "Unindexed analytics query caused Postgres connection exhaustion for 14 minutes; PgBouncer pool sizing increased.",
-      overview: "On Tuesday at 14:22 UTC, an unindexed query on the `meeting_events` table triggered sequential table scans across 40M rows, locking connections and causing 504 gateway timeouts. SRE team killed slow transactions and provisioned read-replica offloading.",
+      templateName: "Engineering Architecture Review",
+      headline: "Postgres read-replica routing deployed to staging; PgBouncer connection limit increased to 800.",
+      overview: "Engineering weekly covering database latency fixes, connection pooling, and live SSE streaming architecture. SRE confirmed zero connection drops over the last 24 hours.",
       sections: [
         {
-          id: "pm-1",
-          title: "Timeline & Impact",
+          id: "eng-sync-1",
+          title: "Database Performance & Read Replica Offload",
           bullets: [
-            "14:22 UTC: Automated P1 alert fired for P99 database latency (> 5000ms).",
-            "14:28 UTC: Devonte identified long-running query on `meeting_events` table.",
-            "14:36 UTC: Terminated PID and applied statement timeout threshold (3000ms).",
-            "Total user impact: 14 minutes of intermittent transcript save errors."
-          ]
-        },
-        {
-          id: "pm-2",
-          title: "Root Cause & Preventive Actions",
-          bullets: [
-            "Missing composite index on `(workspace_id, created_at DESC)`.",
-            "PgBouncer max client connections was set too low (200 instead of 800).",
-            "Heavy analytics queries were running against the primary instance rather than read replicas."
+            "Composite index on `meeting_events(workspace_id, created_at DESC)` reduced query times by 98%.",
+            "Read-replica pool configured to handle all dashboard metrics queries.",
+            "Connection pool headroom now sitting at 75% capacity."
           ]
         }
       ],
       keyDecisions: [
-        "Enforce strict 3-second statement timeout on all primary database connections.",
-        "Route all dashboard analytics queries exclusively to read replicas.",
-        "Add automated PR check requiring index analysis for all newly added SQL queries."
+        "Promote read-replica middleware to production this Thursday night.",
+        "Add automated load test alerts at 70% pool saturation."
       ],
       nextSteps: [
-        "Emily to create the missing index on `meeting_events` during maintenance window.",
-        "Devonte to update PgBouncer connection limits in Terraform.",
-        "Marcus to audit all ORM queries in the dashboard service."
+        "Emily to monitor production query latency curves after rollout.",
+        "Devonte to document failover runbook in Notion."
       ]
     },
     actionItems: [
       {
         id: "act-7",
-        text: "Apply composite index on meeting_events (workspace_id, created_at)",
-        assignee: { name: "Emily Thorne", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80" },
+        text: "Deploy read-replica routing middleware to us-east-1 production",
+        assignee: { name: "Marcus Vance", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80" },
         completed: true,
         timestamp: 540,
         priority: "high",
-        dueDate: "Yesterday"
+        dueDate: "Thursday"
       },
       {
         id: "act-8",
-        text: "Configure query routing middleware to split reads to replica cluster",
-        assignee: { name: "Marcus Vance", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80" },
+        text: "Update SRE failover runbook with new replica promotion instructions",
+        assignee: { name: "Devonte Washington", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80" },
         completed: false,
         timestamp: 820,
-        priority: "high",
-        dueDate: "Aug 5, 2026"
+        priority: "medium",
+        dueDate: "Friday"
       }
     ],
     highlights: [
@@ -589,16 +419,7 @@ export const SEED_MEETINGS: Meeting[] = [
         id: "hl-6",
         startTime: 310,
         endTime: 345,
-        text: "The root cause was a sequential scan on 40 million rows locking the connection pool.",
-        color: "red",
-        label: "Blocker",
-        createdByType: "ai"
-      },
-      {
-        id: "hl-7",
-        startTime: 620,
-        endTime: 655,
-        text: "We are introducing a hard 3-second statement timeout across the entire cluster.",
+        text: "The composite index brought our average analytics query time down from 4200ms to 45ms.",
         color: "green",
         label: "Decision",
         createdByType: "ai"
@@ -613,7 +434,7 @@ export const SEED_MEETINGS: Meeting[] = [
         speakerRole: "Staff SRE",
         startTime: 0,
         endTime: 60,
-        text: "Alright team, let's walk through the post-mortem for Tuesday's P1 incident. We experienced 14 minutes of degraded performance on the core transcript API starting at 14:22 UTC."
+        text: "Morning everyone. Let's do a quick check-in on the database cluster after applying the composite index on meeting_events."
       },
       {
         id: "tr-17",
@@ -623,31 +444,458 @@ export const SEED_MEETINGS: Meeting[] = [
         speakerRole: "Lead Database Administrator",
         startTime: 61,
         endTime: 190,
-        text: "Looking at the pg_stat_activity logs, an analytics cron job kicked off without filtering by date partitions. It ran a sequential scan across 42 million rows in meeting_events, which saturated the IOPS and held all 200 connection slots."
-      },
-      {
-        id: "tr-18",
-        speakerId: "spk-3",
-        speakerName: "Marcus Vance",
-        speakerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Lead Systems Architect",
-        startTime: 191,
-        endTime: 320,
-        text: "That explains why the API pods started throwing 504s. The web tier couldn't acquire a free database handle. Let's fix this in two ways: first, create the composite index; second, mandate read replica routing for all analytics."
+        text: "The results on staging have been stellar. Query latency dropped from over 4 seconds down to 45 milliseconds, and PgBouncer connection utilization is down from 95% to 22%."
       }
     ]
   },
   {
     id: "meet-4",
-    title: "Bi-Weekly 1-on-1: Career Growth & Staff Eng Scope",
+    title: "Q4 Planning & Resource Allocation",
+    description: "Leadership alignment on Q4 headcount, infrastructure budget, and enterprise security initiatives.",
+    date: new Date(NOW - DAY * 1 - HOUR * 6).toISOString(), // Yesterday
+    duration: 2700, // 45 mins
+    category: "executive",
+    meetingType: "Planning",
+    platform: "zoom",
+    tags: ["Executive", "Planning", "Headcount", "Q4", "Budget"],
+    isFavorite: false,
+    createdAt: new Date(NOW - DAY * 1 - HOUR * 6).toISOString(),
+    speakers: [
+      {
+        id: "spk-11",
+        name: "Robert Sterling",
+        role: "Chief Executive Officer",
+        email: "robert.sterling@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "spk-12",
+        name: "Sophia Lin",
+        role: "Chief Financial Officer",
+        email: "sophia.lin@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "spk-1",
+        name: "Sarah Chen",
+        role: "VP of Product",
+        email: "sarah.chen@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+      }
+    ],
+    summary: {
+      templateId: "exec_brief",
+      templateName: "Executive Planning Brief",
+      headline: "Approved 8 new engineering headcount for Q4 and allocated $350k for GPU inference scaling.",
+      overview: "Strategic review of Q4 growth targets. CEO Robert Sterling approved expanding the distributed AI engineering team to accelerate enterprise multi-tenant search capabilities.",
+      sections: [
+        {
+          id: "q4-1",
+          title: "Hiring & Headcount Targets",
+          bullets: [
+            "4 Senior Distributed Backend Engineers, 2 AI Research Engineers, 2 Enterprise Account Executives.",
+            "Hiring kickoff scheduled with recruiting for next Monday."
+          ]
+        },
+        {
+          id: "q4-2",
+          title: "Budget & GPU Compute Reserves",
+          bullets: [
+            "Reserved $350k GPU cluster capacity with tier-1 provider for predictable inferencing costs."
+          ]
+        }
+      ],
+      keyDecisions: [
+        "Lock Q4 hiring target at 8 full-time hires.",
+        "Sign 1-year GPU compute reservation to lock in 40% margin discounts."
+      ],
+      nextSteps: [
+        "Sophia to execute compute reservation contract.",
+        "Sarah to submit job specs for senior AI engineering roles."
+      ]
+    },
+    actionItems: [
+      {
+        id: "act-12",
+        text: "Submit job descriptions for Senior Distributed AI Engineers",
+        assignee: { name: "Sarah Chen", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" },
+        completed: false,
+        timestamp: 450,
+        priority: "high",
+        dueDate: "Monday"
+      }
+    ],
+    highlights: [
+      {
+        id: "hl-11",
+        startTime: 200,
+        endTime: 235,
+        text: "Locking the 1-year GPU reservation guarantees our gross margin target stays above 80%.",
+        color: "green",
+        label: "Decision",
+        createdByType: "ai"
+      }
+    ],
+    transcript: [
+      {
+        id: "tr-30",
+        speakerId: "spk-11",
+        speakerName: "Robert Sterling",
+        speakerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+        speakerRole: "Chief Executive Officer",
+        startTime: 0,
+        endTime: 50,
+        text: "Welcome team. Let's align on our Q4 resource commitments. Sarah, what are the must-have hires to support our enterprise customer pipeline?"
+      },
+      {
+        id: "tr-31",
+        speakerId: "spk-1",
+        speakerName: "Sarah Chen",
+        speakerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+        speakerRole: "VP of Product",
+        startTime: 51,
+        endTime: 160,
+        text: "We need 4 distributed systems engineers to harden the real-time transcription cluster, plus 2 applied AI researchers to specialize in real-time citation accuracy."
+      }
+    ]
+  },
+  {
+    id: "meet-5",
+    title: "Client Demo: Enterprise Notetaking Suite",
+    description: "Product demonstration with NorthStar Labs leadership showing live AI transcription, action item sync, and sharing.",
+    date: new Date(NOW - DAY * 3).toISOString(), // 3 days ago (This Week)
+    duration: 1800, // 30 mins
+    category: "demo",
+    meetingType: "Client Demo",
+    platform: "google_meet",
+    tags: ["Demo", "Client", "Enterprise", "NorthStar"],
+    isFavorite: true,
+    createdAt: new Date(NOW - DAY * 3).toISOString(),
+    speakers: [
+      {
+        id: "spk-5",
+        name: "David Kim",
+        role: "Strategic Account Executive",
+        email: "david.kim@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "spk-10",
+        name: "Jason Miller",
+        role: "Design Partner, NorthStar Labs",
+        email: "jason@northstarlabs.io",
+        avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
+      }
+    ],
+    summary: {
+      templateId: "default",
+      templateName: "Client Demo Summary",
+      headline: "NorthStar Labs rated transcript-grounded citations 10/10 and requested sandbox deployment for 25 seats.",
+      overview: "Comprehensive demo showing Fathom's synchronized playback, automatic MEDDIC summaries, and interactive clip sharing. Client was particularly impressed with zero-login public sharing.",
+      sections: [
+        {
+          id: "demo-1",
+          title: "Feature Reactions & Feedback",
+          bullets: [
+            "Jason praised the instant timestamp jump when clicking citation pills in Ask Fathom.",
+            "Requested custom template creation for their internal design sprint formats."
+          ]
+        }
+      ],
+      keyDecisions: ["Provide NorthStar Labs with 25 sandbox seats by Wednesday"],
+      nextSteps: ["David to send sandbox onboarding invites and documentation"]
+    },
+    actionItems: [
+      {
+        id: "act-13",
+        text: "Provision 25 sandbox seats for NorthStar Labs design team",
+        assignee: { name: "David Kim", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80" },
+        completed: true,
+        timestamp: 400,
+        priority: "medium",
+        dueDate: "Wednesday"
+      }
+    ],
+    highlights: [
+      {
+        id: "hl-12",
+        startTime: 220,
+        endTime: 250,
+        text: "The ability to share a 30-second trimmed video snippet without requiring a login is a game changer for our client presentations.",
+        color: "purple",
+        label: "Praise",
+        createdByType: "ai"
+      }
+    ],
+    transcript: [
+      {
+        id: "tr-40",
+        speakerId: "spk-5",
+        speakerName: "David Kim",
+        speakerAvatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
+        speakerRole: "Strategic Account Executive",
+        startTime: 0,
+        endTime: 40,
+        text: "Hey Jason, welcome! Today I'll walk you through how Fathom captures meeting knowledge in real-time, extracts action items, and lets you query past meetings with verified citations."
+      }
+    ]
+  },
+  {
+    id: "meet-6",
+    title: "Investor Discussion & Financial Review",
+    description: "Quarterly business review with lead Series A investors covering ARR growth, runway, and net retention.",
+    date: new Date(NOW - DAY * 4).toISOString(), // 4 days ago (This Week)
+    duration: 2280, // 38 mins
+    category: "executive",
+    meetingType: "Investor Review",
+    platform: "zoom",
+    tags: ["Investor", "Financials", "ARR", "Growth", "Board"],
+    isFavorite: true,
+    createdAt: new Date(NOW - DAY * 4).toISOString(),
+    speakers: [
+      {
+        id: "spk-11",
+        name: "Robert Sterling",
+        role: "Chief Executive Officer",
+        email: "robert.sterling@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "spk-12",
+        name: "Sophia Lin",
+        role: "Chief Financial Officer",
+        email: "sophia.lin@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+      }
+    ],
+    summary: {
+      templateId: "exec_brief",
+      templateName: "Investor Update Brief",
+      headline: "ARR reached $4.82M (135% YoY expansion); net burn decreased to $85k/month with 28 months runway.",
+      overview: "Investors congratulated the team on hitting 135% YoY revenue growth while expanding gross margins to 82% through inference optimizations.",
+      sections: [
+        {
+          id: "inv-1",
+          title: "Unit Economics & Runway",
+          bullets: [
+            "Current ARR: $4.82M (up from $2.05M last year).",
+            "Cash in bank: $14.2M (28 months runway).",
+            "Net Revenue Retention: 128% across mid-market tier."
+          ]
+        }
+      ],
+      keyDecisions: ["Schedule next investor sync for late October"],
+      nextSteps: ["Sophia to share final audited Q2 appendix tables"]
+    },
+    actionItems: [
+      {
+        id: "act-14",
+        text: "Send audited Q2 investor financial deck to venture partners",
+        assignee: { name: "Sophia Lin", avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80" },
+        completed: true,
+        timestamp: 500,
+        priority: "high",
+        dueDate: "Done"
+      }
+    ],
+    highlights: [
+      {
+        id: "hl-13",
+        startTime: 180,
+        endTime: 215,
+        text: "We crossed $4.82M in ARR with 82% gross margins, comfortably exceeding our high-case annual plan.",
+        color: "green",
+        label: "Decision",
+        createdByType: "ai"
+      }
+    ],
+    transcript: [
+      {
+        id: "tr-50",
+        speakerId: "spk-11",
+        speakerName: "Robert Sterling",
+        speakerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+        speakerRole: "Chief Executive Officer",
+        startTime: 0,
+        endTime: 40,
+        text: "Good afternoon. We're proud to share our Q2 operating results with our board and lead investors today."
+      }
+    ]
+  },
+  {
+    id: "meet-7",
+    title: "Design Review: Mobile & Web Timeline UX",
+    description: "Critique of the synchronized audio scrubber, highlight color tokens, and mobile transcript reader.",
+    date: new Date(NOW - DAY * 5).toISOString(), // 5 days ago (This Week)
+    duration: 2100, // 35 mins
+    category: "design",
+    meetingType: "Design Review",
+    platform: "zoom",
+    tags: ["Design", "UX/UI", "Mobile", "Scrubber", "Figma"],
+    isFavorite: false,
+    createdAt: new Date(NOW - DAY * 5).toISOString(),
+    speakers: [
+      {
+        id: "spk-4",
+        name: "Elena Rostova",
+        role: "Principal Product Designer",
+        email: "elena.rostova@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "spk-1",
+        name: "Sarah Chen",
+        role: "VP of Product",
+        email: "sarah.chen@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+      }
+    ],
+    summary: {
+      templateId: "default",
+      templateName: "Design Critique Summary",
+      headline: "Approved mobile waveform touch-scrubber and unified dark mode palette tokens across web and mobile.",
+      overview: "Elena presented the updated mobile transcript reading experience. The team approved high-contrast speaker badges and quick-action swipe gestures for clipping highlights.",
+      sections: [
+        {
+          id: "des-1",
+          title: "Timeline & Interaction Decisions",
+          bullets: [
+            "Waveform timeline scrubber supports smooth haptic scrubbing on mobile.",
+            "Highlight toolbar floats above text selection with single-click color categorization."
+          ]
+        }
+      ],
+      keyDecisions: ["Lock dark mode design tokens to Slate-950 base with Indigo-500 accents"],
+      nextSteps: ["Elena to hand off mobile component specs to the frontend engineering team"]
+    },
+    actionItems: [
+      {
+        id: "act-15",
+        text: "Export mobile design tokens and Figma components for engineers",
+        assignee: { name: "Elena Rostova", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" },
+        completed: false,
+        timestamp: 620,
+        priority: "medium",
+        dueDate: "Monday"
+      }
+    ],
+    highlights: [
+      {
+        id: "hl-14",
+        startTime: 300,
+        endTime: 330,
+        text: "The floating highlight pill lets people highlight text with zero friction and immediately assign action items.",
+        color: "blue",
+        label: "Key Point",
+        createdByType: "ai"
+      }
+    ],
+    transcript: [
+      {
+        id: "tr-60",
+        speakerId: "spk-4",
+        speakerName: "Elena Rostova",
+        speakerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        speakerRole: "Principal Product Designer",
+        startTime: 0,
+        endTime: 45,
+        text: "Hi Sarah! Today I'm walking through the final polish for our responsive meeting detail view and mobile timeline scrubber."
+      }
+    ]
+  },
+  {
+    id: "meet-8",
+    title: "Senior Staff AI Engineer Hiring Interview",
+    description: "Technical system design interview covering distributed vector search and low-latency streaming pipelines.",
+    date: new Date(NOW - DAY * 8).toISOString(), // 8 days ago (Last Week)
+    duration: 3600, // 60 mins
+    category: "hiring",
+    meetingType: "Hiring Interview",
+    platform: "google_meet",
+    tags: ["Hiring", "Interview", "AI Engineer", "Systems Design"],
+    isFavorite: false,
+    createdAt: new Date(NOW - DAY * 8).toISOString(),
+    speakers: [
+      {
+        id: "spk-2",
+        name: "Alex Rivera",
+        role: "Head of AI Research",
+        email: "alex.rivera@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "spk-3",
+        name: "Marcus Vance",
+        role: "Lead Systems Architect",
+        email: "marcus.vance@fathom.work",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      }
+    ],
+    summary: {
+      templateId: "default",
+      templateName: "Interview Scorecard",
+      headline: "Strong Hire recommendation: Candidate demonstrated mastery of distributed vector indexing and cache invalidation.",
+      overview: "Candidate excelled in designing a sub-50ms vector retrieval pipeline for 100M meeting segments with high recall and graceful degradation under network partition.",
+      sections: [
+        {
+          id: "hire-1",
+          title: "Technical Evaluation & Competencies",
+          bullets: [
+            "Distributed Systems: 5/5 — Flawless explanation of Raft consensus and replica synchronization.",
+            "AI/ML Engineering: 5/5 — Deep experience with quantized embeddings and ONNX runtime optimizations."
+          ]
+        }
+      ],
+      keyDecisions: ["Extend formal offer for Senior Staff AI Engineer position"],
+      nextSteps: ["Alex to submit formal scorecard in Greenhouse and draft offer compensation"]
+    },
+    actionItems: [
+      {
+        id: "act-16",
+        text: "Submit formal interview scorecard and offer letter recommendation",
+        assignee: { name: "Alex Rivera", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80" },
+        completed: true,
+        timestamp: 800,
+        priority: "high",
+        dueDate: "Done"
+      }
+    ],
+    highlights: [
+      {
+        id: "hl-15",
+        startTime: 410,
+        endTime: 440,
+        text: "The candidate's approach to rolling chunk quantization reduced RAM overhead by 4x without degrading citation accuracy.",
+        color: "green",
+        label: "Decision",
+        createdByType: "ai"
+      }
+    ],
+    transcript: [
+      {
+        id: "tr-70",
+        speakerId: "spk-2",
+        speakerName: "Alex Rivera",
+        speakerAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+        speakerRole: "Head of AI Research",
+        startTime: 0,
+        endTime: 40,
+        text: "Welcome! Today we'll spend 45 minutes on real-time streaming architectures and vector index scalability."
+      }
+    ]
+  },
+  {
+    id: "meet-9",
+    title: "Bi-Weekly 1-on-1: Career Growth & Staff Scope",
     description: "Career progression, cross-functional leadership on the AI streaming stack, and Q4 mentorship goals.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
+    date: new Date(NOW - DAY * 9).toISOString(), // 9 days ago (Last Week)
     duration: 1320, // 22 mins
     category: "1-on-1",
+    meetingType: "1-on-1 Sync",
     platform: "zoom",
     tags: ["1-on-1", "Career", "Mentorship", "Leadership"],
     isFavorite: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    createdAt: new Date(NOW - DAY * 9).toISOString(),
     speakers: [
       {
         id: "spk-1",
@@ -668,7 +916,7 @@ export const SEED_MEETINGS: Meeting[] = [
       templateId: "one_on_one",
       templateName: "1-on-1 Sync",
       headline: "Marcus commended for driving the latency initiative; expanding scope to company-wide technical architecture council.",
-      overview: "Productive sync covering Marcus's recent technical leadership on streaming RAG pipelines and career goals toward Principal Architect. Discussed balancing hands-on coding with cross-team architectural reviews.",
+      overview: "Productive sync covering Marcus's recent technical leadership on streaming RAG pipelines and career goals toward Principal Architect.",
       sections: [
         {
           id: "one-1",
@@ -677,14 +925,6 @@ export const SEED_MEETINGS: Meeting[] = [
             "Marcus's work on Redis chunk caching received high praise from the executive team.",
             "Great collaboration with Elena on front-end timestamp synchronization."
           ]
-        },
-        {
-          id: "one-2",
-          title: "Career Goals & Staff/Principal Scope",
-          bullets: [
-            "Marcus looking to mentor 2 senior engineers on distributed systems.",
-            "Sarah to sponsor Marcus for the upcoming Architecture Steering Committee."
-          ]
         }
       ],
       keyDecisions: [
@@ -692,8 +932,7 @@ export const SEED_MEETINGS: Meeting[] = [
         "Set target for Principal Architect promotion review in Q4."
       ],
       nextSteps: [
-        "Sarah to submit formal nomination for the Tech Architecture Council.",
-        "Marcus to outline mentorship curriculum for senior backend engineers."
+        "Sarah to submit formal nomination for the Tech Architecture Council."
       ]
     },
     actionItems: [
@@ -727,31 +966,22 @@ export const SEED_MEETINGS: Meeting[] = [
         speakerRole: "VP of Product",
         startTime: 0,
         endTime: 40,
-        text: "Hey Marcus! How has your week been going? I wanted to spend today talking through your feedback, the AI streaming launch, and where we take your career next."
-      },
-      {
-        id: "tr-20",
-        speakerId: "spk-3",
-        speakerName: "Marcus Vance",
-        speakerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Lead Systems Architect",
-        startTime: 41,
-        endTime: 160,
-        text: "Hey Sarah. Overall great! The sub-800ms latency win felt really rewarding. Right now I'm thinking about how we scale our engineering practices as the team doubles over the next two quarters."
+        text: "Hey Marcus! How has your week been going? I wanted to spend today talking through your feedback and career growth."
       }
     ]
   },
   {
-    id: "meet-5",
+    id: "meet-10",
     title: "Customer Usability Interview: Workflow Automation",
-    description: "User research session testing automatic action item syncing to Linear and Asana.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
+    description: "User research session testing automatic action item syncing to Linear, Jira, and Slack.",
+    date: new Date(NOW - DAY * 18).toISOString(), // 18 days ago (Earlier this month)
     duration: 2100, // 35 mins
     category: "research",
+    meetingType: "User Research",
     platform: "zoom",
     tags: ["User Research", "Usability", "Integrations", "Linear", "Design"],
     isFavorite: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+    createdAt: new Date(NOW - DAY * 18).toISOString(),
     speakers: [
       {
         id: "spk-4",
@@ -779,18 +1009,15 @@ export const SEED_MEETINGS: Meeting[] = [
           title: "Key Usability Observations",
           bullets: [
             "Users loved the hover button 'Export to Linear' on action item cards.",
-            "Suggested adding keyboard shortcut 'H' to quickly highlight active speaker sentence.",
-            "Timeline waveform scrubber was intuitive and responsive."
+            "Suggested adding keyboard shortcut 'H' to quickly highlight active speaker sentence."
           ]
         }
       ],
       keyDecisions: [
-        "Add keyboard shortcuts (Space for play/pause, H for highlight, C for clip).",
-        "Include assignee auto-detection based on speaker names."
+        "Add keyboard shortcuts (Space for play/pause, H for highlight, C for clip)."
       ],
       nextSteps: [
-        "Elena to prototype keyboard shortcut cheat sheet in the app header.",
-        "Incorporate Jason's feedback into the v2 design system."
+        "Elena to prototype keyboard shortcut cheat sheet in the app header."
       ]
     },
     actionItems: [
@@ -824,129 +1051,7 @@ export const SEED_MEETINGS: Meeting[] = [
         speakerRole: "Principal Product Designer",
         startTime: 0,
         endTime: 40,
-        text: "Hi Jason! Thanks for joining today. We're testing our new meeting playback controls and action item extraction interface. Feel free to think aloud as you navigate."
-      },
-      {
-        id: "tr-22",
-        speakerId: "spk-10",
-        speakerName: "Jason Miller",
-        speakerAvatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Design Partner, NorthStar Labs",
-        startTime: 41,
-        endTime: 150,
-        text: "Awesome. Looking at the timeline, the color blocks showing who is speaking make it super easy to jump between people. And when I click this action item on the right, it jumps right to the sentence where I promised to follow up. That is incredible."
-      }
-    ]
-  },
-  {
-    id: "meet-6",
-    title: "Executive Board Preparation & Q2 Financials Sync",
-    description: "Revenue ARR projections, burn multiple analysis, and series B runway extension review.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(), // 4 days ago
-    duration: 2280, // 38 mins
-    category: "executive",
-    platform: "zoom",
-    tags: ["Executive", "Board", "Financials", "ARR", "Runway"],
-    isFavorite: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
-    speakers: [
-      {
-        id: "spk-11",
-        name: "Robert Sterling",
-        role: "Chief Executive Officer",
-        email: "robert.sterling@fathom.work",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-      },
-      {
-        id: "spk-12",
-        name: "Sophia Lin",
-        role: "Chief Financial Officer",
-        email: "sophia.lin@fathom.work",
-        avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
-      },
-      {
-        id: "spk-1",
-        name: "Sarah Chen",
-        role: "VP of Product",
-        email: "sarah.chen@fathom.work",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-      }
-    ],
-    summary: {
-      templateId: "exec_brief",
-      templateName: "Executive Brief",
-      headline: "ARR reached $4.8M (135% YoY growth); net burn decreased to $85k/month with 28 months runway.",
-      overview: "Executive review of the Q2 board deck. Revenue growth surpassed the high-case plan driven by enterprise self-serve adoption. Gross margins improved to 82% following inference cost optimizations.",
-      sections: [
-        {
-          id: "ex-1",
-          title: "Financial Performance & Runway",
-          bullets: [
-            "Current ARR: $4.82M (up from $2.05M in Q2 last year).",
-            "Cash balance: $14.2M representing 28 months of runway at current hiring pace.",
-            "Net revenue retention (NRR) at 128% among mid-market accounts."
-          ]
-        },
-        {
-          id: "ex-2",
-          title: "Hiring & Expansion Plan",
-          bullets: [
-            "Open headcount: 6 engineering roles, 3 enterprise AEs, and 1 developer advocate.",
-            "New European data center region scheduled to come online in October."
-          ]
-        }
-      ],
-      keyDecisions: [
-        "Approved Q3 hiring plan of 10 headcount.",
-        "Targeting next funding round outreach for Q1 next year."
-      ],
-      nextSteps: [
-        "Sophia to finalize appendix slides for the Board meeting on August 18th.",
-        "Robert to schedule 1-on-1 prep sessions with lead investors."
-      ]
-    },
-    actionItems: [
-      {
-        id: "act-11",
-        text: "Finalize audited GAAP financial tables for Board deck Appendix",
-        assignee: { name: "Sophia Lin", avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80" },
-        completed: false,
-        timestamp: 640,
-        priority: "high",
-        dueDate: "Aug 10, 2026"
-      }
-    ],
-    highlights: [
-      {
-        id: "hl-10",
-        startTime: 180,
-        endTime: 220,
-        text: "Our ARR hit $4.82M, representing 135% year-over-year expansion with 82% gross margins.",
-        color: "green",
-        label: "Decision",
-        createdByType: "ai"
-      }
-    ],
-    transcript: [
-      {
-        id: "tr-23",
-        speakerId: "spk-11",
-        speakerName: "Robert Sterling",
-        speakerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Chief Executive Officer",
-        startTime: 0,
-        endTime: 50,
-        text: "Welcome Sophia and Sarah. Today we're reviewing the final numbers for next week's Board of Directors meeting. Sophia, could you walk us through the headline ARR and margin metrics?"
-      },
-      {
-        id: "tr-24",
-        speakerId: "spk-12",
-        speakerName: "Sophia Lin",
-        speakerAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
-        speakerRole: "Chief Financial Officer",
-        startTime: 51,
-        endTime: 210,
-        text: "Certainly Robert. Q2 was our strongest quarter to date. We crossed $4.82M in annual recurring revenue, reflecting 135% YoY growth. Thanks to the model routing efficiencies Sarah's team deployed, our gross margins expanded to 82%."
+        text: "Hi Jason! Thanks for joining today. We're testing our new meeting playback controls and action item extraction interface."
       }
     ]
   }

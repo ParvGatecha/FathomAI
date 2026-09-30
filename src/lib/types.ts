@@ -5,7 +5,10 @@ export type MeetingCategory =
   | '1-on-1'
   | 'executive'
   | 'product'
-  | 'research';
+  | 'research'
+  | 'demo'
+  | 'hiring'
+  | 'design';
 
 export type MeetingPlatform = 'zoom' | 'google_meet' | 'teams' | 'in_person';
 
@@ -71,7 +74,7 @@ export interface SummarySection {
 }
 
 export interface MeetingSummary {
-  templateId: 'default' | 'sales_meddic' | 'eng_sprint' | 'one_on_one' | 'exec_brief' | 'user_research';
+  templateId: 'default' | 'sales_meddic' | 'eng_sprint' | 'one_on_one' | 'exec_brief' | 'user_research' | 'interview_scorecard' | 'design_critique';
   templateName: string;
   headline: string;
   overview: string;
@@ -86,7 +89,8 @@ export interface Meeting {
   description?: string;
   date: string; // ISO string
   duration: number; // in seconds
-  category: 'sales' | 'engineering' | '1-on-1' | 'executive' | 'product' | 'research';
+  category: MeetingCategory;
+  meetingType?: string; // e.g. "Roadmap Review", "MEDDIC Discovery", "Architecture Sync", "Sprint Planning", "Interview"
   platform: MeetingPlatform;
   mediaUrl?: string;
   speakers: Speaker[];
