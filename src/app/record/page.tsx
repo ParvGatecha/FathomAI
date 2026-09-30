@@ -347,24 +347,82 @@ export default function RecordPage() {
   };
 
   // Handle End Meeting -> Start Processing Sequence
-  const handleEndMeeting = () => {
+  const handleEndMeeting = async () => {
     setStage("processing");
     setActiveProcessingIndex(0);
 
     const newMeetingId = `meet-live-${Date.now()}`;
     setCreatedMeetingId(newMeetingId);
 
+    const transcriptSegments =
+      streamedSegments.length > 0
+        ? streamedSegments
+        : scenario.script.map((s, idx) => ({
+            id: `tr-gen-${idx}`,
+            speakerId: `spk-${idx}`,
+            speakerName: s.speakerName,
+            speakerRole: s.speakerRole,
+            speakerAvatar: s.avatar,
+            startTime: idx * 8,
+            endTime: (idx + 1) * 8,
+            text: s.text,
+          }));
+
+    const durationSec = Math.max(elapsedSeconds, transcriptSegments.length * 8, 45);
+
     // Progressive Processing Steps Animation (350ms per step)
     let step = 0;
-    const procInterval = setInterval(() => {
+    const procInterval = setInterval(async () => {
       step += 1;
       if (step < PROCESSING_STEPS.length) {
         setActiveProcessingIndex(step);
       } else {
         clearInterval(procInterval);
 
+        // Attempt OpenAI AI summary extraction
+        let generatedOverview = scenario.overview;
+        let generatedDecisions = scenario.keyDecisions;
+        let generatedActions = scenario.actionItems;
+        let generatedHighlights = scenario.highlights;
+
+        try {
+          const res = await fetch(`/api/meetings/${newMeetingId}/summarize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              templateId: scenario.category === "sales" ? "sales_meddic" : "eng_sprint",
+              title: customTitle || scenario.title,
+              category: scenario.category,
+              transcript: transcriptSegments,
+              speakers: scenario.speakers,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.overview) generatedOverview = data.overview;
+            if (data.decisions?.length) generatedDecisions = data.decisions;
+            if (data.highlights?.length) {
+              generatedHighlights = data.highlights.map((h: any) => ({
+                text: h.reason || h.quote || "Key takeaway",
+                label: "Key Point" as const,
+                timestamp: h.timestamp || 0,
+              }));
+            }
+            if (data.actionItems?.length) {
+              generatedActions = data.actionItems.map((a: any, i: number) => ({
+                text: a.task,
+                assigneeName: a.assignee || scenario.speakers[0]?.name || "Alex Rivera",
+                dueDate: a.dueDate || "Next Sprint",
+                priority: "high" as const,
+                timestamp: i * 8,
+              }));
+            }
+          }
+        } catch {
+          // Fall back gracefully to scenario seeded values
+        }
+
         // Build and save final Meeting object to store
-        const durationSec = Math.max(elapsedSeconds, streamedSegments.length * 8, 45);
         const finalMeeting: Meeting = {
           id: newMeetingId,
           title: customTitle || scenario.title,
@@ -378,24 +436,12 @@ export default function RecordPage() {
           isFavorite: true,
           createdAt: new Date().toISOString(),
           speakers: scenario.speakers,
-          transcript:
-            streamedSegments.length > 0
-              ? streamedSegments
-              : scenario.script.map((s, idx) => ({
-                  id: `tr-gen-${idx}`,
-                  speakerId: `spk-${idx}`,
-                  speakerName: s.speakerName,
-                  speakerRole: s.speakerRole,
-                  speakerAvatar: s.avatar,
-                  startTime: idx * 8,
-                  endTime: (idx + 1) * 8,
-                  text: s.text,
-                })),
+          transcript: transcriptSegments,
           summary: {
             templateId: scenario.category === "sales" ? "sales_meddic" : "eng_sprint",
             templateName: scenario.category === "sales" ? "Sales Call (MEDDIC)" : "Engineering Sprint",
             headline: scenario.headline,
-            overview: scenario.overview,
+            overview: generatedOverview,
             sections: [
               {
                 id: "sec-1",
@@ -407,10 +453,10 @@ export default function RecordPage() {
                 citations: [{ timestamp: 0, quote: scenario.script[0]?.text || "" }],
               },
             ],
-            keyDecisions: scenario.keyDecisions,
+            keyDecisions: generatedDecisions,
             nextSteps: scenario.nextSteps,
           },
-          actionItems: scenario.actionItems.map((act, i) => ({
+          actionItems: generatedActions.map((act, i) => ({
             id: `act-live-${i}-${Date.now()}`,
             text: act.text,
             assignee: {
@@ -422,7 +468,7 @@ export default function RecordPage() {
             priority: act.priority,
             dueDate: act.dueDate,
           })),
-          highlights: scenario.highlights.map((hl, i) => ({
+          highlights: generatedHighlights.map((hl, i) => ({
             id: `hl-live-${i}-${Date.now()}`,
             startTime: hl.timestamp,
             endTime: hl.timestamp + 8,

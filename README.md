@@ -113,24 +113,38 @@ Building and maintaining headless recording bots (WebRTC capture, Zoom OAuth, ca
 
 ## AI Architecture
 
-The meeting intelligence system operates deterministically on structured transcript datasets:
+The application uses an **OpenAI-powered architecture** with strict factual grounding, structured JSON schemas, citation verification/repair, and a deterministic offline fallback engine:
 
 ```mermaid
-graph LR
-    A["Transcript Data\n(Speaker Turns + Words)"] --> B["Chunking & Segmentation\n(Turn-by-turn + Timestamps)"]
-    B --> C["Retrieval & Lexical Scoring\n(BM25, n-grams, Intent Match)"]
-    C --> D["Context Selection\n(Top-k Relevant Turns)"]
-    D --> E["Structured Synthesis\n(Grounded Answers)"]
-    E --> F["Source Citation Generator\n(Clickable Timestamps)"]
+graph TD
+    User["User Question (Meeting / Cross-Meeting)"] --> API["API Layer (/api/ask, /api/meetings/ask, /api/meetings/[id]/summarize)"]
+    API --> Retrieval["retrieveRelevantSegments() (BM25 + Token Matching + Neighbor Expansion)"]
+    Retrieval --> Prompt["Grounded Prompt Builder (Strict Grounding Rules + Neighbor Turns)"]
+    Prompt --> CheckKey{"OPENAI_API_KEY Configured?"}
+    
+    CheckKey -- Yes --> OpenAI["OpenAI Client (gpt-4o-mini / JSON Mode)"]
+    OpenAI --> Validate["Citation Validator & Repair Engine (Timestamp Snapping & Quote Verification)"]
+    Validate --> Response["Structured JSON Response (Answer + Grounded Citations)"]
+    
+    CheckKey -- No / Error --> Fallback["Deterministic Fallback Engine (Transcript Synthesis + Exact Citations)"]
+    Fallback --> Response
 ```
 
-1. **Transcript Data:** Every meeting contains speaker-attributed transcript segments with precise start/end timestamps, speaker avatars, and roles.
-2. **Chunking:** Transcripts are chunked at conversational speaker turns, preserving the exact start time, speaker identity, and dialogue context.
-3. **Retrieval:** A client-side lexical and semantic matching engine processes questions, matching against intent patterns (e.g. commitments, decisions, objections, SLA terms, pricing).
-4. **Context Selection:** Top-ranking dialogue segments and related action items/decisions are selected as factual context.
-5. **LLM Generation / Synthesis:** Answers are synthesized directly from verified statements in the selected context, avoiding generic LLM hallucinations.
-6. **Source Citations:** Every synthesized answer generates structured citation objects (`timestamp`, `quote`, `speakerName`), rendered in the UI as clickable jump chips.
-7. **Fallback Behavior:** If a question cannot be resolved against the meeting transcript, the engine gracefully indicates that no matching discussion was found and suggests related topics discussed in the call.
+### Core Architecture Components:
+
+1. **Server-Side OpenAI Client (`src/lib/openai.ts`):**
+   - Configured via server-side `OPENAI_API_KEY` (never exposed to client JavaScript).
+   - Structured telemetry logging (`logAIOperation`) capturing request duration, model name, and context count without leaking keys or credentials.
+2. **Grounded Retrieval (`src/lib/retrieval.ts`):**
+   - `retrieveRelevantSegments()` tokenizes queries, scores exact/intent keyword matches, and includes contextual neighboring turns.
+   - Preserves meeting ID, speaker name/role, timestamps, and verbatim dialogue.
+3. **Citation Validation & Repair (`src/lib/citation-validator.ts`):**
+   - Strictly verifies every LLM citation against the retrieved ground-truth context.
+   - Automatically snaps slightly offset timestamps to exact segment `startTime` and discards ungrounded citations.
+4. **Summary & Template Synthesizer (`src/lib/ai-grounded.ts`):**
+   - Generates structured executive overviews, key topics, decisions, action items, open questions, and highlights tailored to 6 templates: General, Sales (MEDDIC), Customer Success, Product, Engineering, and Interview.
+5. **Deterministic Fallback (`src/lib/deterministic-fallback.ts`):**
+   - If `OPENAI_API_KEY` is not configured or the OpenAI API experiences downtime/timeout, the system seamlessly falls back to deterministic synthesis, ensuring the app remains 100% operational for evaluators.
 
 ---
 
@@ -149,18 +163,25 @@ cd FathomAI
 # 2. Install dependencies
 npm install
 
-# 3. Start development server with Turbopack
+# 3. (Optional) Configure OpenAI API Key
+cp .env.example .env.local
+# Add your OPENAI_API_KEY to .env.local
+
+# 4. Start development server with Turbopack
 npm run dev
 
-# 4. Or run production build locally
+# 5. Or run production build locally
 npm run build
 npm run start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Quality Validation Scripts
+### Quality & AI Test Scripts
 ```bash
+# Run AI Architecture Test Suite (11 comprehensive tests)
+npm test
+
 # Run TypeScript typecheck
 npm run typecheck
 
@@ -175,19 +196,17 @@ npm run build
 
 ## Environment Variables
 
-The application runs entirely self-contained with no mandatory external API keys required for evaluation.
-
-Create a `.env.local` file if custom port configuration is desired:
+The application runs out of the box with deterministic fallback. To enable real OpenAI generation, configure:
 
 ```env
-# Optional: Application Port (Default: 3000)
-PORT=3000
+# Optional: OpenAI API Key for real LLM synthesis (Server-side only)
+OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional: Next.js environment
-NODE_ENV=production
+# Optional: Preferred model (Default: gpt-4o-mini)
+OPENAI_MODEL=gpt-4o-mini
 ```
 
-> **Note:** No proprietary credentials, database secrets, or API keys are required or committed.
+> **Security Guarantee:** The `OPENAI_API_KEY` is accessed exclusively in server-side API routes and is never sent to the browser.
 
 ---
 

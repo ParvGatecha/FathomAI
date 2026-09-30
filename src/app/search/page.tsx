@@ -64,21 +64,45 @@ function SearchContent() {
   }, [rawResults]);
 
   // Cross-Meeting Ask Fathom
-  const handleAskGlobalAi = (customPrompt?: string) => {
+  const handleAskGlobalAi = async (customPrompt?: string) => {
     const prompt = customPrompt || aiQuestion;
     if (!prompt.trim()) return;
 
     setIsAiLoading(true);
     setAiAnswer(null);
 
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/meetings/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: prompt,
+          customContext: meetings,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAiAnswer({
+          text: data.answer,
+          citations: data.citations || [],
+        });
+      } else {
+        const result = askGlobalIntelligence(meetings, prompt);
+        setAiAnswer({
+          text: result.text,
+          citations: result.citations,
+        });
+      }
+    } catch {
       const result = askGlobalIntelligence(meetings, prompt);
       setAiAnswer({
         text: result.text,
         citations: result.citations,
       });
+    } finally {
       setIsAiLoading(false);
-    }, 450);
+    }
   };
 
   const getMatchIcon = (type: SearchResultMatch["matchType"]) => {

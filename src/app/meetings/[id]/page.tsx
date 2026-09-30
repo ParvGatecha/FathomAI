@@ -393,8 +393,41 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
       chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 50);
 
-    // Grounded retrieval
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingId: meeting.id,
+          question: q,
+          customContext: meeting,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const assistantMsg: MeetingChatMessage = {
+          id: `asst-${Date.now()}`,
+          role: "assistant",
+          text: data.answer,
+          citations: data.citations || [],
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+        setChatMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        // Fallback locally
+        const groundedResult = askMeetingIntelligence(meeting, q);
+        const assistantMsg: MeetingChatMessage = {
+          id: `asst-${Date.now()}`,
+          role: "assistant",
+          text: groundedResult.text,
+          citations: groundedResult.citations,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+        setChatMessages((prev) => [...prev, assistantMsg]);
+      }
+    } catch {
+      // Local fallback on network error
       const groundedResult = askMeetingIntelligence(meeting, q);
       const assistantMsg: MeetingChatMessage = {
         id: `asst-${Date.now()}`,
@@ -403,14 +436,13 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
         citations: groundedResult.citations,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-
       setChatMessages((prev) => [...prev, assistantMsg]);
+    } finally {
       setIsChatThinking(false);
-
       setTimeout(() => {
         chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 60);
-    }, 450);
+    }
   };
 
   // Add Action Item Handler
