@@ -543,6 +543,12 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
 
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              {meeting.tags?.includes("Flagship Meeting") && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 via-indigo-500/20 to-purple-500/20 text-amber-300 border border-amber-500/40 shadow-sm flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-400 animate-pulse" />
+                  Flagship Meeting (1h 02m · 8 participants)
+                </span>
+              )}
               <span
                 className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${catColor.bg} ${catColor.text} ${catColor.border}`}
               >

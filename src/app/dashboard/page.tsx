@@ -238,17 +238,20 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Link
             href="/meetings/meet-1"
-            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition-all group"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-indigo-500/40 hover:border-indigo-500/80 transition-all group relative overflow-hidden"
           >
             <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-              <span className="font-bold text-indigo-400">PRODUCT & SLA</span>
-              <span>18m</span>
+              <span className="font-bold text-amber-400 flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-amber-400" />
+                FLAGSHIP MEETING
+              </span>
+              <span className="font-mono text-indigo-300 font-semibold">1h 02m · 8 people</span>
             </div>
             <h3 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
-              Product Strategy: Q3 AI Copilot & SLAs
+              Q4 Product Strategy & Enterprise Planning
             </h3>
             <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
-              99.95% uptime commitment, GPU cluster pod rollout, 6 decisions.
+              194 segments, $32 enterprise pricing, sub-800ms latency SLA, and SOC2 observation window.
             </p>
           </Link>
 

@@ -3,8 +3,9 @@ import OpenAI from "openai";
 let openaiInstance: OpenAI | null = null;
 
 export function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  const rawKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = rawKey?.replace(/^['"]|['"]$/g, "").trim();
+  if (!apiKey || apiKey.length < 10) {
     return null;
   }
 
@@ -20,8 +21,9 @@ export function getOpenAIClient(): OpenAI | null {
 }
 
 export function isOpenAIConfigured(): boolean {
-  const key = process.env.OPENAI_API_KEY?.trim();
-  return Boolean(key && key.length > 5 && !key.includes("your-api-key"));
+  const rawKey = process.env.OPENAI_API_KEY?.trim();
+  const key = rawKey?.replace(/^['"]|['"]$/g, "").trim();
+  return Boolean(key && key.length > 10 && !key.includes("your-api-key") && !key.includes("your_openai_api_key"));
 }
 
 export function getOpenAIModel(): string {

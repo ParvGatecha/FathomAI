@@ -123,6 +123,7 @@ Provide a grounded, structured answer with verified citations:`;
       text: parsed.answer || "I could not find a definitive answer in the transcript.",
       citations: validatedCitations,
       confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.95,
+      isRealLLM: true,
     };
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
