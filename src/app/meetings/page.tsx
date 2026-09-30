@@ -210,17 +210,28 @@ function MeetingsContent() {
       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-850">
         {categories.map((cat) => {
           const isActive = selectedCategory === cat.value;
+          const count =
+            cat.value === "all"
+              ? meetings.length
+              : meetings.filter((m) => m.category === cat.value).length;
           return (
             <button
               key={cat.value}
               onClick={() => setSelectedCategory(cat.value)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 ${
                 isActive
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 font-semibold"
                   : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
               }`}
             >
-              {cat.label}
+              <span>{cat.label}</span>
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  isActive ? "bg-white/20 text-white" : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                {count}
+              </span>
             </button>
           );
         })}

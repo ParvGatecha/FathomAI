@@ -145,7 +145,7 @@ export default function DashboardPage() {
           <Link href="/record">
             <Button variant="primary" size="sm" className="text-xs">
               <Radio className="h-3.5 w-3.5 text-rose-300 animate-pulse mr-1" />
-              <span>Simulate Live Bot</span>
+              <span>Record Meeting</span>
             </Button>
           </Link>
         </div>
@@ -219,6 +219,71 @@ export default function DashboardPage() {
             </div>
           </div>
         </Card>
+      </div>
+
+      {/* Featured Evaluator Spotlight */}
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-purple-950/50 border border-indigo-500/30 space-y-3 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-indigo-400" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-200">
+              Evaluator Spotlight — Top 3 Demo Workflows
+            </h2>
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+            Click any card to test grounded intelligence
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Link
+            href="/meetings/meet-1"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition-all group"
+          >
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+              <span className="font-bold text-indigo-400">PRODUCT & SLA</span>
+              <span>18m</span>
+            </div>
+            <h3 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
+              Product Strategy: Q3 AI Copilot & SLAs
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
+              99.95% uptime commitment, GPU cluster pod rollout, 6 decisions.
+            </p>
+          </Link>
+
+          <Link
+            href="/meetings/meet-2"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition-all group"
+          >
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+              <span className="font-bold text-emerald-400">SALES & MEDDIC</span>
+              <span>24m</span>
+            </div>
+            <h3 className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
+              Customer Discovery: Acme Corp
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
+              250-seat rollout, SAML objection resolution, $120k ARR opportunity.
+            </p>
+          </Link>
+
+          <Link
+            href="/meetings/meet-3"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all group"
+          >
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+              <span className="font-bold text-blue-400">ENGINEERING ARCH</span>
+              <span>22m</span>
+            </div>
+            <h3 className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1">
+              Engineering Architecture Sync
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
+              Sub-200ms streaming latency benchmarks and Turbopack migrations.
+            </p>
+          </Link>
+        </div>
       </div>
 
       {/* Today's Meetings Spotlight (if any) */}

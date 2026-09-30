@@ -312,6 +312,36 @@ export default function MeetingDetailPage({
     setTimeout(() => setCopiedClip(false), 2200);
   };
 
+  const [copiedNotes, setCopiedNotes] = useState(false);
+
+  // Export Formatted Notes to Markdown
+  const handleExportMarkdown = () => {
+    if (!meeting) return;
+    const md = `# ${meeting.title}
+**Date:** ${formatDate(meeting.date)} | **Duration:** ${formatDuration(meeting.duration)}
+**Category:** ${meeting.category} | **Platform:** ${meeting.platform}
+**Participants:** ${meeting.speakers.map((s) => `${s.name} (${s.role})`).join(", ")}
+
+## Executive Summary (${meeting.summary.templateName})
+${meeting.summary?.headline || ""}
+
+${meeting.summary?.overview || ""}
+
+## Key Decisions
+${meeting.summary?.keyDecisions.map((d) => `- ${d}`).join("\n") || "- None recorded"}
+
+## Action Items
+${meeting.actionItems.map((a) => `- [${a.completed ? "x" : " "}] ${a.text} (${a.assignee?.name || "Unassigned"}, Due: ${a.dueDate || "This week"})`).join("\n")}
+
+## Key Discussion Topics
+${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
+`;
+    navigator.clipboard.writeText(md);
+    setCopiedNotes(true);
+    showToast("📋 Formatted notes copied to clipboard as Markdown!");
+    setTimeout(() => setCopiedNotes(false), 2200);
+  };
+
   // Copy Quote to Clipboard
   const handleCopyQuote = (seg: TranscriptSegment) => {
     const text = `"${seg.text}" — ${seg.speakerName} (${formatTime(seg.startTime)})`;
@@ -526,6 +556,26 @@ export default function MeetingDetailPage({
               {meeting.speakers.length} participants
             </span>
           </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportMarkdown}
+            className="text-xs hidden sm:flex"
+            title="Copy meeting notes, decisions, and action items as Markdown"
+          >
+            {copiedNotes ? (
+              <>
+                <Check className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <FileText className="h-3.5 w-3.5 mr-1 text-slate-400" />
+                <span>Copy Notes</span>
+              </>
+            )}
+          </Button>
 
           <Button
             variant="glass"
@@ -933,7 +983,7 @@ export default function MeetingDetailPage({
               </ul>
             </div>
 
-            {/* Action Items Preview */}
+            {/* Action Items Preview & Progress Meter */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -947,6 +997,26 @@ export default function MeetingDetailPage({
                   Manage All ({openActionCount} open) →
                 </button>
               </div>
+
+              {/* Progress Bar */}
+              {meeting.actionItems.length > 0 && (
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-semibold text-slate-300">Completion:</span>
+                    <span className="text-slate-400 font-mono text-[11px]">
+                      {completedActionCount} of {meeting.actionItems.length} completed ({Math.round((completedActionCount / meeting.actionItems.length) * 100)}%)
+                    </span>
+                  </div>
+                  <div className="w-32 sm:w-48 h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${(completedActionCount / meeting.actionItems.length) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 {meeting.actionItems.map((act) => (
