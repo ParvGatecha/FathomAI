@@ -105,7 +105,7 @@ export function Sidebar() {
             className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium text-xs shadow-md shadow-indigo-500/20 border border-indigo-400/20 transition-all duration-200 active:scale-[0.98]"
           >
             <Radio className="h-3.5 w-3.5 animate-pulse text-rose-300" />
-            <span>Simulate Live Bot</span>
+            <span>Record Meeting</span>
           </Link>
         </div>
 
