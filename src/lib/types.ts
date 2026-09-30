@@ -125,7 +125,7 @@ export interface SearchResultMatch {
   meetingTitle: string;
   meetingDate: string;
   category: string;
-  matchType: 'title' | 'transcript' | 'summary' | 'action_item';
+  matchType: 'title' | 'transcript' | 'summary' | 'action_item' | 'highlight';
   timestamp?: number;
   speakerName?: string;
   snippet: string;

@@ -62,6 +62,7 @@ import {
   getCategoryBadgeColor,
 } from "@/lib/utils";
 import { AVAILABLE_TEMPLATES } from "@/lib/templates";
+import { askMeetingIntelligence, GroundedCitation } from "@/lib/rag";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
@@ -78,6 +79,14 @@ const TEMPLATE_ICONS: Record<string, any> = {
   engineering: Cpu,
   interview: GraduationCap,
 };
+
+export interface MeetingChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  timestamp: string;
+  citations?: GroundedCitation[];
+}
 
 export default function MeetingDetailPage({
   params,
@@ -109,13 +118,26 @@ export default function MeetingDetailPage({
   const [isMuted, setIsMuted] = useState(false);
   const [hoverTimelineTime, setHoverTimelineTime] = useState<number | null>(null);
 
-  // Navigation Tabs: 'overview' | 'transcript' | 'highlights' | 'actions' | 'split'
+  // Navigation Tabs: 'overview' | 'transcript' | 'highlights' | 'actions' | 'chat' | 'split'
   const [activeTab, setActiveTab] = useState<
-    "overview" | "transcript" | "highlights" | "actions" | "split"
+    "overview" | "transcript" | "highlights" | "actions" | "chat" | "split"
   >("overview");
 
   // In-Transcript Search Filter
   const [transcriptSearch, setTranscriptSearch] = useState("");
+
+  // Ask Fathom Chat State
+  const [chatMessages, setChatMessages] = useState<MeetingChatMessage[]>([
+    {
+      id: "init-1",
+      role: "assistant",
+      text: "👋 Hi! I'm **Ask Fathom**. Ask me anything about this meeting's discussion, decisions, action items, or speaker commitments, and I will provide transcript-grounded answers with clickable source timestamps.",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatThinking, setIsChatThinking] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Clip Share Modal
   const [isClipModalOpen, setIsClipModalOpen] = useState(false);
@@ -307,6 +329,46 @@ export default function MeetingDetailPage({
       setIsSwitchingTemplate(false);
       showToast(`Template changed to ${templateId.replace("_", " ")}`);
     }, 280);
+  };
+
+  // Send Question to Ask Fathom AI
+  const handleSendAiQuestion = async (customQuestion?: string) => {
+    const q = (customQuestion || chatInput).trim();
+    if (!q || !meeting) return;
+
+    const userMsg: MeetingChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      text: q,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput("");
+    setIsChatThinking(true);
+
+    setTimeout(() => {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+
+    // Grounded retrieval
+    setTimeout(() => {
+      const groundedResult = askMeetingIntelligence(meeting, q);
+      const assistantMsg: MeetingChatMessage = {
+        id: `asst-${Date.now()}`,
+        role: "assistant",
+        text: groundedResult.text,
+        citations: groundedResult.citations,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setChatMessages((prev) => [...prev, assistantMsg]);
+      setIsChatThinking(false);
+
+      setTimeout(() => {
+        chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 60);
+    }, 450);
   };
 
   // Add Action Item Handler
@@ -647,6 +709,11 @@ export default function MeetingDetailPage({
               id: "actions",
               label: `Action Items (${openActionCount} open)`,
               icon: CheckCircle2,
+            },
+            {
+              id: "chat",
+              label: "Ask Fathom ✨",
+              icon: Sparkles,
             },
             {
               id: "split",
@@ -1429,7 +1496,180 @@ export default function MeetingDetailPage({
         )}
 
         {/* ========================================================= */}
-        {/* TAB 5: SPLIT VIEW (Transcript + Notes Side-by-Side)       */}
+        {/* TAB 5: ASK FATHOM (AI Q&A Grounded in Transcript)         */}
+        {/* ========================================================= */}
+        {activeTab === "chat" && (
+          <div className="max-w-4xl mx-auto space-y-5 flex flex-col min-h-[600px]">
+            {/* Header & Prompt Suggestions */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-300">
+                  <Sparkles className="h-4 w-4 text-indigo-400" />
+                  <span>Ask Fathom AI Assistant</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    {meeting.speakers.length} speakers
+                  </span>
+                  <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    {meeting.transcript.length} transcript turns
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400">
+                Ask any question about this call. Answers are synthesized directly from speaker transcripts with clickable timestamps.
+              </p>
+
+              {/* Suggested Questions */}
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {[
+                  "What were the main concerns?",
+                  "What decisions were made?",
+                  `What did ${meeting.speakers[0]?.name || "Sarah"} agree to do?`,
+                  "What were the customer's objections?",
+                  "What are the next steps?",
+                ].map((promptText) => (
+                  <button
+                    key={promptText}
+                    onClick={() => handleSendAiQuestion(promptText)}
+                    className="text-xs px-3 py-1 rounded-full bg-slate-950/80 hover:bg-indigo-600/20 text-slate-300 hover:text-indigo-300 border border-slate-800 hover:border-indigo-500/40 transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles className="h-3 w-3 text-indigo-400" />
+                    <span>{promptText}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chat Thread Messages */}
+            <div className="space-y-4 flex-1 overflow-y-auto pr-1 min-h-[360px]">
+              {chatMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 text-xs leading-relaxed ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  {msg.role === "assistant" && (
+                    <div className="h-7 w-7 rounded-lg bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="h-4 w-4 text-indigo-400" />
+                    </div>
+                  )}
+
+                  <div
+                    className={`max-w-2xl p-4 rounded-2xl space-y-2.5 ${
+                      msg.role === "user"
+                        ? "bg-indigo-600/25 border border-indigo-500/40 text-slate-100 rounded-tr-sm"
+                        : "bg-slate-900/80 border border-slate-800 text-slate-200 rounded-tl-sm shadow-md"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4 text-[10px] text-slate-400 border-b border-slate-800/80 pb-1.5 mb-1.5">
+                      <span className="font-semibold text-slate-300">
+                        {msg.role === "user" ? "You" : "Fathom AI"}
+                      </span>
+                      <span className="font-mono">{msg.timestamp}</span>
+                    </div>
+
+                    <div className="whitespace-pre-wrap font-sans text-xs space-y-2">
+                      {msg.text}
+                    </div>
+
+                    {/* Grounded Source Citations */}
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div className="pt-3 mt-2 border-t border-slate-800/80 space-y-1.5">
+                        <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                          <Clock className="h-3 w-3" />
+                          <span>Grounded Transcript Sources:</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {msg.citations.map((cite, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                handleSeek(cite.timestamp, true);
+                                showToast(`⭐ Jumped to ${formatTime(cite.timestamp)}`);
+                              }}
+                              className="p-2.5 rounded-xl bg-slate-950/80 border border-amber-400/20 hover:border-amber-400/50 transition-all text-left group flex items-start gap-2"
+                              title={`Jump to ${formatTime(cite.timestamp)} in audio player`}
+                            >
+                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0 mt-0.5" />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-mono font-bold text-amber-300 text-[11px]">
+                                    {formatTime(cite.timestamp)}
+                                  </span>
+                                  {cite.speakerName && (
+                                    <span className="text-[10px] text-slate-400">
+                                      {cite.speakerName}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-300 group-hover:text-white truncate mt-0.5">
+                                  &ldquo;{cite.quote}&rdquo;
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {msg.role === "user" && (
+                    <div className="h-7 w-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 mt-0.5 font-bold text-slate-200">
+                      U
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isChatThinking && (
+                <div className="flex gap-3 text-xs leading-relaxed justify-start">
+                  <div className="h-7 w-7 rounded-lg bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                    <Sparkles className="h-4 w-4 text-indigo-400 animate-spin" />
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 text-indigo-300 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 animate-pulse text-indigo-400" />
+                    <span>Searching transcript dialogue & grounding citations...</span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Chat Input Bar */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendAiQuestion();
+              }}
+              className="p-3 rounded-2xl bg-slate-900/95 border border-slate-800 flex items-center gap-2 sticky bottom-0 z-10 shadow-xl"
+            >
+              <Input
+                placeholder="Ask about concerns, decisions, speaker agreements, or next steps..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="py-2 text-xs flex-1"
+                disabled={isChatThinking}
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className="text-xs shrink-0"
+                disabled={isChatThinking || !chatInput.trim()}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                <span>Ask AI</span>
+              </Button>
+            </form>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 6: SPLIT VIEW (Transcript + Notes Side-by-Side)       */}
         {/* ========================================================= */}
         {activeTab === "split" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">

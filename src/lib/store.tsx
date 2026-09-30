@@ -323,7 +323,7 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
       const results: SearchResultMatch[] = [];
 
       for (const m of meetings) {
-        // Title match
+        // 1. Title match
         if (m.title.toLowerCase().includes(q)) {
           results.push({
             meetingId: m.id,
@@ -335,8 +335,11 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        // Summary match
-        if (m.summary?.headline.toLowerCase().includes(q) || m.summary?.overview.toLowerCase().includes(q)) {
+        // 2. Summary match (headline, overview, sections)
+        if (
+          m.summary?.headline.toLowerCase().includes(q) ||
+          m.summary?.overview.toLowerCase().includes(q)
+        ) {
           results.push({
             meetingId: m.id,
             meetingTitle: m.title,
@@ -347,9 +350,29 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        // Action item match
+        // Search within summary section bullets
+        if (m.summary?.sections) {
+          for (const sec of m.summary.sections) {
+            for (const bullet of sec.bullets) {
+              if (bullet.toLowerCase().includes(q)) {
+                results.push({
+                  meetingId: m.id,
+                  meetingTitle: m.title,
+                  meetingDate: m.date,
+                  category: m.category,
+                  matchType: "summary",
+                  timestamp: sec.citations?.[0]?.timestamp || 0,
+                  snippet: bullet,
+                });
+                break;
+              }
+            }
+          }
+        }
+
+        // 3. Action item match
         for (const act of m.actionItems) {
-          if (act.text.toLowerCase().includes(q)) {
+          if (act.text.toLowerCase().includes(q) || act.assignee?.name.toLowerCase().includes(q)) {
             results.push({
               meetingId: m.id,
               meetingTitle: m.title,
@@ -357,14 +380,33 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
               category: m.category,
               matchType: "action_item",
               timestamp: act.timestamp,
+              speakerName: act.assignee?.name,
               snippet: act.text,
             });
           }
         }
 
-        // Transcript segment match
+        // 4. Highlight match
+        for (const hl of m.highlights) {
+          if (hl.text.toLowerCase().includes(q) || hl.label.toLowerCase().includes(q)) {
+            results.push({
+              meetingId: m.id,
+              meetingTitle: m.title,
+              meetingDate: m.date,
+              category: m.category,
+              matchType: "highlight",
+              timestamp: hl.startTime,
+              snippet: hl.text,
+            });
+          }
+        }
+
+        // 5. Transcript segment match
         for (const seg of m.transcript) {
-          if (seg.text.toLowerCase().includes(q)) {
+          if (
+            seg.text.toLowerCase().includes(q) ||
+            seg.speakerName.toLowerCase().includes(q)
+          ) {
             results.push({
               meetingId: m.id,
               meetingTitle: m.title,
@@ -379,7 +421,7 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      return results.slice(0, 25);
+      return results.slice(0, 40);
     },
     [meetings]
   );
