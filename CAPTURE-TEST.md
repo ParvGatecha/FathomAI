@@ -21,7 +21,7 @@
 
 ## 3. Canary Log Paths
 * **Session 1 Log File:** `.agent-logs/2026-09-30_05-41-20_282459cd-83be-4f9b-91b4-2ea8ec621b41.md`
-* **Session 2 Log File:** *(Will be recorded upon running Canary 2 in a new session)*
+* **Session 2 Log File:** `.agent-logs/2026-09-30_05-48-06_4eb34a73-4b14-4095-9988-eacb9193f126.md`
 
 ---
 
@@ -44,8 +44,22 @@ model: gemini-3.7-flash-high
 Canary 1 received and verified. The prompt and response are automatically captured in .agent-logs/2026-09-30_05-41-20_282459cd-83be-4f9b-91b4-2ea8ec621b41.md.
 ```
 
-### Canary 2 (Session 2)
-*(To be populated from the second session test)*
+### Canary 2 (Session `4eb34a73`)
+
+```
+[LOG_ENTRY type=PROMPT num=1 session=4eb34a73]
+timestamp: 2026-09-30T05:48:06Z
+model: gemini-3.7-flash-high
+
+CAPTURE TEST — 8x assignment, Parv Gatecha (Session 2)
+
+
+[LOG_ENTRY type=RESPONSE num=1 session=4eb34a73]
+timestamp: 2026-09-30T05:48:06Z
+model: gemini-3.7-flash-high
+
+Canary 2 received and verified across sessions. The second session log is automatically recorded in .agent-logs/2026-09-30_05-48-06_4eb34a73-4b14-4095-9988-eacb9193f126.md.
+```
 
 ---
 
