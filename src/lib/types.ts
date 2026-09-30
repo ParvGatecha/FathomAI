@@ -130,3 +130,15 @@ export interface SearchResultMatch {
   speakerName?: string;
   snippet: string;
 }
+
+export interface MeetingClip {
+  id: string;
+  meetingId: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  createdAt: string;
+  createdBy?: string;
+  notes?: string;
+}
+

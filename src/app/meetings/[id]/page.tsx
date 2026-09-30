@@ -69,6 +69,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Meeting, TranscriptSegment, ActionItem, Highlight, Speaker } from "@/lib/types";
+import { encodeClipToken } from "@/lib/clips";
 
 // Template Icon Map
 const TEMPLATE_ICONS: Record<string, any> = {
@@ -139,8 +140,10 @@ export default function MeetingDetailPage({
   const [isChatThinking, setIsChatThinking] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Clip Share Modal
+  // Clip Share Modal State
   const [isClipModalOpen, setIsClipModalOpen] = useState(false);
+  const [clipTitle, setClipTitle] = useState("");
+  const [clipNotes, setClipNotes] = useState("");
   const [clipStart, setClipStart] = useState(0);
   const [clipEnd, setClipEnd] = useState(30);
   const [copiedClip, setCopiedClip] = useState(false);
@@ -282,22 +285,31 @@ export default function MeetingDetailPage({
   };
 
   // Clip Sharing setup
-  const handleOpenClipModal = (start?: number, end?: number) => {
+  const handleOpenClipModal = (start?: number, end?: number, defaultTitle?: string) => {
     if (!meeting) return;
     const s = start !== undefined ? Math.floor(start) : Math.floor(currentTime);
-    const e = end !== undefined ? Math.floor(end) : Math.min(s + 30, meeting.duration);
+    const e = end !== undefined ? Math.floor(end) : Math.min(s + 45, meeting.duration);
     setClipStart(s);
     setClipEnd(e);
+    setClipTitle(defaultTitle || `${meeting.title} — Highlight Clip`);
+    setClipNotes("");
     setIsClipModalOpen(true);
   };
 
   const handleCopyClipLink = () => {
     if (!meeting) return;
-    const url = `${window.location.origin}/shared/${meeting.id}?start=${clipStart}&end=${clipEnd}`;
+    const token = encodeClipToken({
+      meetingId: meeting.id,
+      title: clipTitle || `${meeting.title} Clip`,
+      start: clipStart,
+      end: clipEnd,
+      notes: clipNotes,
+    });
+    const url = `${window.location.origin}/shared/${token}`;
     navigator.clipboard.writeText(url);
     setCopiedClip(true);
-    setTimeout(() => setCopiedClip(false), 2000);
-    showToast("Shareable link copied to clipboard");
+    showToast("Shareable clip link copied to clipboard!");
+    setTimeout(() => setCopiedClip(false), 2200);
   };
 
   // Copy Quote to Clipboard
@@ -1796,73 +1808,172 @@ export default function MeetingDetailPage({
         )}
       </div>
 
-      {/* Share Clip Modal */}
+      {/* Share Clip Modal Studio */}
       <Modal
         isOpen={isClipModalOpen}
         onClose={() => setIsClipModalOpen(false)}
-        title="Share Meeting Highlight Clip"
-        description="Generate a shareable public link for this trimmed moment."
+        title="Share Clip with Teammate or Stakeholder"
+        description="Create a public, timestamped video/audio clip excerpt with speaker transcript."
       >
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Clip Start:</span>
-              <span className="font-mono text-indigo-300">
-                {formatTime(clipStart)}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={meeting.duration}
-              value={clipStart}
-              onChange={(e) => setClipStart(Number(e.target.value))}
-              className="w-full accent-indigo-500 cursor-pointer"
-            />
-
-            <div className="flex items-center justify-between text-xs pt-2">
-              <span className="text-slate-400">Clip End:</span>
-              <span className="font-mono text-indigo-300">
-                {formatTime(clipEnd)}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={clipStart}
-              max={meeting.duration}
-              value={clipEnd}
-              onChange={(e) => setClipEnd(Number(e.target.value))}
-              className="w-full accent-indigo-500 cursor-pointer"
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Clip Title Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-300">
+              Clip Title
+            </label>
+            <Input
+              value={clipTitle}
+              onChange={(e) => setClipTitle(e.target.value)}
+              placeholder="e.g. Enterprise SLA Agreement"
+              className="text-xs bg-slate-950 border-slate-800"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="primary"
-              size="md"
-              className="flex-1 text-xs"
-              onClick={handleCopyClipLink}
-            >
-              {copiedClip ? (
-                <>
-                  <Check className="h-4 w-4 mr-1 text-emerald-300" />
-                  Link Copied to Clipboard!
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4 mr-1" />
-                  Copy Shareable Clip Link
-                </>
-              )}
-            </Button>
-            <Link
-              href={`/shared/${meeting.id}?start=${clipStart}&end=${clipEnd}`}
-              target="_blank"
-            >
-              <Button variant="secondary" size="md" className="text-xs">
-                <ExternalLink className="h-4 w-4" />
+          {/* Time Range Configurator */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-medium">Selected Range:</span>
+              <span className="font-mono text-xs font-bold text-indigo-300 px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
+                {formatTime(clipStart)} → {formatTime(clipEnd)} ({Math.max(1, Math.round(clipEnd - clipStart))}s)
+              </span>
+            </div>
+
+            {/* Quick preset buttons */}
+            <div className="flex items-center gap-1.5 pt-1">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase mr-1">
+                Duration:
+              </span>
+              {[
+                { label: "+15s", add: 15 },
+                { label: "+30s", add: 30 },
+                { label: "+45s", add: 45 },
+                { label: "+60s", add: 60 },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setClipEnd(Math.min(clipStart + preset.add, meeting.duration))}
+                  className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-indigo-600/20 text-slate-300 hover:text-indigo-300 border border-slate-800 text-[11px] font-mono transition-colors"
+                >
+                  {preset.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setClipStart(0);
+                  setClipEnd(meeting.duration);
+                }}
+                className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-[11px] transition-colors"
+              >
+                Full
+              </button>
+            </div>
+
+            {/* Start Slider */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] text-slate-400">
+                <span>Clip Start:</span>
+                <span className="font-mono text-slate-200">{formatTime(clipStart)}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(0, clipEnd - 5)}
+                value={clipStart}
+                onChange={(e) => setClipStart(Number(e.target.value))}
+                className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
+              />
+            </div>
+
+            {/* End Slider */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] text-slate-400">
+                <span>Clip End:</span>
+                <span className="font-mono text-slate-200">{formatTime(clipEnd)}</span>
+              </div>
+              <input
+                type="range"
+                min={Math.min(meeting.duration, clipStart + 5)}
+                max={meeting.duration}
+                value={clipEnd}
+                onChange={(e) => setClipEnd(Number(e.target.value))}
+                className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
+              />
+            </div>
+          </div>
+
+          {/* Live Transcript Excerpt Preview */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Clip Transcript Excerpt Preview:
+            </span>
+            <div className="max-h-36 overflow-y-auto space-y-2 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+              {meeting.transcript
+                .filter((s) => s.endTime >= clipStart && s.startTime <= clipEnd)
+                .map((seg) => (
+                  <div key={seg.id} className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <Avatar name={seg.speakerName} src={seg.speakerAvatar} size="xs" />
+                      <span className="font-bold text-slate-200">{seg.speakerName}</span>
+                      <span className="font-mono text-indigo-400 text-[10px]">
+                        {formatTime(seg.startTime)}
+                      </span>
+                    </div>
+                    <p className="text-slate-300 text-xs pl-6">{seg.text}</p>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Link Generator Box */}
+          <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-indigo-300 font-semibold flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                Public Shareable Link
+              </span>
+              <span className="text-[10px] text-emerald-400 font-medium">
+                No sign-in required for recipient
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="md"
+                className="flex-1 text-xs"
+                onClick={handleCopyClipLink}
+              >
+                {copiedClip ? (
+                  <>
+                    <Check className="h-4 w-4 mr-1 text-emerald-300" />
+                    <span>✓ Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-1" />
+                    <span>Copy Shareable Link</span>
+                  </>
+                )}
               </Button>
-            </Link>
+
+              <Link
+                href={`/shared/${encodeClipToken({
+                  meetingId: meeting.id,
+                  title: clipTitle || `${meeting.title} Clip`,
+                  start: clipStart,
+                  end: clipEnd,
+                  notes: clipNotes,
+                })}`}
+                target="_blank"
+              >
+                <Button variant="secondary" size="md" className="text-xs" title="Preview public shared clip page in new tab">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  <span>Preview</span>
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </Modal>
