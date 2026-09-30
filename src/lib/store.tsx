@@ -1,20 +1,45 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { Meeting, ActionItem, Highlight, SearchResultMatch } from "./types";
+import { Meeting, ActionItem, Highlight, SearchResultMatch, TranscriptSegment } from "./types";
 import { SEED_MEETINGS } from "./seed-data";
+import { generateSummaryForTemplate } from "./templates";
 
 const STORAGE_KEY = "fathom_meetings_v1";
+
+export interface AddActionItemParams {
+  text: string;
+  timestamp?: number;
+  assignee?: {
+    name: string;
+    avatar: string;
+  };
+  dueDate?: string;
+  priority?: "low" | "medium" | "high";
+}
 
 interface StoreContextType {
   meetings: Meeting[];
   isLoaded: boolean;
   getMeeting: (id: string) => Meeting | undefined;
   toggleActionItem: (meetingId: string, actionId: string) => void;
-  addActionItem: (meetingId: string, text: string, timestamp?: number) => void;
+  addActionItem: (
+    meetingId: string,
+    paramsOrText: string | AddActionItemParams,
+    timestamp?: number,
+    assignee?: { name: string; avatar: string },
+    dueDate?: string,
+    priority?: "low" | "medium" | "high"
+  ) => void;
   deleteActionItem: (meetingId: string, actionId: string) => void;
   addHighlight: (meetingId: string, highlight: Omit<Highlight, "id">) => void;
   deleteHighlight: (meetingId: string, highlightId: string) => void;
+  toggleSegmentHighlight: (
+    meetingId: string,
+    segment: TranscriptSegment,
+    label?: string,
+    color?: Highlight["color"]
+  ) => boolean;
   setSummaryTemplate: (meetingId: string, templateId: string) => void;
   toggleFavorite: (meetingId: string) => void;
   addMeeting: (meeting: Meeting) => void;
@@ -83,20 +108,43 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addActionItem = useCallback(
-    (meetingId: string, text: string, timestamp: number = 0) => {
+    (
+      meetingId: string,
+      paramsOrText: string | AddActionItemParams,
+      timestamp: number = 0,
+      assignee?: { name: string; avatar: string },
+      dueDate: string = "This Week",
+      priority: "low" | "medium" | "high" = "medium"
+    ) => {
       const updated = meetings.map((m) => {
         if (m.id !== meetingId) return m;
-        const newItem: ActionItem = {
-          id: `act-${Date.now()}`,
-          text,
-          completed: false,
-          timestamp,
-          priority: "medium",
-          dueDate: "Pending",
-        };
+
+        let newItem: ActionItem;
+        if (typeof paramsOrText === "object") {
+          newItem = {
+            id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            text: paramsOrText.text,
+            completed: false,
+            timestamp: paramsOrText.timestamp ?? 0,
+            assignee: paramsOrText.assignee,
+            dueDate: paramsOrText.dueDate || "This Week",
+            priority: paramsOrText.priority || "medium",
+          };
+        } else {
+          newItem = {
+            id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            text: paramsOrText,
+            completed: false,
+            timestamp,
+            assignee,
+            dueDate,
+            priority,
+          };
+        }
+
         return {
           ...m,
-          actionItems: [...m.actionItems, newItem],
+          actionItems: [newItem, ...m.actionItems],
         };
       });
       saveMeetings(updated);
@@ -124,11 +172,11 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
         if (m.id !== meetingId) return m;
         const newHighlight: Highlight = {
           ...highlightData,
-          id: `hl-${Date.now()}`,
+          id: `hl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         };
         return {
           ...m,
-          highlights: [...m.highlights, newHighlight],
+          highlights: [newHighlight, ...m.highlights],
         };
       });
       saveMeetings(updated);
@@ -143,9 +191,74 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
         return {
           ...m,
           highlights: m.highlights.filter((h) => h.id !== highlightId),
+          transcript: m.transcript.map((seg) =>
+            seg.highlightId === highlightId ? { ...seg, highlightId: undefined } : seg
+          ),
         };
       });
       saveMeetings(updated);
+    },
+    [meetings, saveMeetings]
+  );
+
+  const toggleSegmentHighlight = useCallback(
+    (
+      meetingId: string,
+      segment: TranscriptSegment,
+      label: string = "Key Point",
+      color: Highlight["color"] = "yellow"
+    ): boolean => {
+      let isNowHighlighted = false;
+      const updated = meetings.map((m) => {
+        if (m.id !== meetingId) return m;
+
+        // Check if highlight already exists for this segment
+        const existingIdx = m.highlights.findIndex(
+          (h) =>
+            h.segmentId === segment.id ||
+            h.id === segment.highlightId ||
+            (Math.abs(h.startTime - segment.startTime) < 0.5 && h.text === segment.text)
+        );
+
+        if (existingIdx !== -1) {
+          // Remove highlight
+          const hlToRemove = m.highlights[existingIdx];
+          isNowHighlighted = false;
+          return {
+            ...m,
+            highlights: m.highlights.filter((_, idx) => idx !== existingIdx),
+            transcript: m.transcript.map((seg) =>
+              seg.id === segment.id || seg.highlightId === hlToRemove.id
+                ? { ...seg, highlightId: undefined }
+                : seg
+            ),
+          };
+        } else {
+          // Add highlight
+          const newId = `hl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          const newHighlight: Highlight = {
+            id: newId,
+            segmentId: segment.id,
+            startTime: segment.startTime,
+            endTime: segment.endTime,
+            text: segment.text,
+            label: (label as any) || "Key Point",
+            color: color || "yellow",
+            createdByType: "user",
+            createdAt: new Date().toISOString(),
+          };
+          isNowHighlighted = true;
+          return {
+            ...m,
+            highlights: [newHighlight, ...m.highlights],
+            transcript: m.transcript.map((seg) =>
+              seg.id === segment.id ? { ...seg, highlightId: newId } : seg
+            ),
+          };
+        }
+      });
+      saveMeetings(updated);
+      return isNowHighlighted;
     },
     [meetings, saveMeetings]
   );
@@ -154,13 +267,14 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
     (meetingId: string, templateId: string) => {
       const updated = meetings.map((m) => {
         if (m.id !== meetingId) return m;
-        if (m.availableSummaries && m.availableSummaries[templateId]) {
-          return {
-            ...m,
-            summary: m.availableSummaries[templateId],
-          };
+        let newSummary = m.availableSummaries?.[templateId];
+        if (!newSummary) {
+          newSummary = generateSummaryForTemplate(m, templateId);
         }
-        return m;
+        return {
+          ...m,
+          summary: newSummary,
+        };
       });
       saveMeetings(updated);
     },
@@ -281,6 +395,7 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
         deleteActionItem,
         addHighlight,
         deleteHighlight,
+        toggleSegmentHighlight,
         setSummaryTemplate,
         toggleFavorite,
         addMeeting,

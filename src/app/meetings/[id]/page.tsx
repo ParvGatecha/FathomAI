@@ -40,20 +40,44 @@ import {
   ListFilter,
   Flame,
   ArrowRight,
+  Star,
+  Trash2,
+  Tag,
+  UserCheck,
+  CalendarClock,
+  AlertCircle,
+  TrendingUp,
+  Briefcase,
+  Cpu,
+  GraduationCap,
+  HeartHandshake,
+  HelpCircle,
+  Filter,
 } from "lucide-react";
-import { useMeetingsStore } from "@/lib/store";
+import { useMeetingsStore, AddActionItemParams } from "@/lib/store";
 import {
   formatTime,
   formatDate,
   formatDuration,
   getCategoryBadgeColor,
 } from "@/lib/utils";
+import { AVAILABLE_TEMPLATES } from "@/lib/templates";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
-import { Meeting, TranscriptSegment, ActionItem, Highlight } from "@/lib/types";
+import { Meeting, TranscriptSegment, ActionItem, Highlight, Speaker } from "@/lib/types";
+
+// Template Icon Map
+const TEMPLATE_ICONS: Record<string, any> = {
+  general: Sparkles,
+  sales: Briefcase,
+  customer_success: HeartHandshake,
+  product: Layers,
+  engineering: Cpu,
+  interview: GraduationCap,
+};
 
 export default function MeetingDetailPage({
   params,
@@ -69,7 +93,10 @@ export default function MeetingDetailPage({
     getMeeting,
     toggleActionItem,
     addActionItem,
+    deleteActionItem,
     addHighlight,
+    deleteHighlight,
+    toggleSegmentHighlight,
     setSummaryTemplate,
   } = useMeetingsStore();
 
@@ -96,9 +123,31 @@ export default function MeetingDetailPage({
   const [clipEnd, setClipEnd] = useState(30);
   const [copiedClip, setCopiedClip] = useState(false);
 
-  // New Action Item Input
+  // Toast Feedback State
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMessage(msg);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2400);
+  }, []);
+
+  // Action Items State
   const [newActionText, setNewActionText] = useState("");
+  const [newActionAssigneeId, setNewActionAssigneeId] = useState<string>("none");
   const [newActionDueDate, setNewActionDueDate] = useState("This Week");
+  const [newActionPriority, setNewActionPriority] = useState<"low" | "medium" | "high">("medium");
+  const [actionFilterStatus, setActionFilterStatus] = useState<"all" | "open" | "completed">("all");
+  const [actionFilterAssignee, setActionFilterAssignee] = useState<string>("all");
+
+  // Summary Template Switching Simulation State
+  const [isSwitchingTemplate, setIsSwitchingTemplate] = useState(false);
+
+  // Copied Quote ID State
+  const [copiedQuoteId, setCopiedQuoteId] = useState<string | null>(null);
 
   // Keyboard Shortcuts Modal
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -107,9 +156,6 @@ export default function MeetingDetailPage({
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
   const activeSegmentRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
-
-  // Audio synthesis reference (generates subtle ambient rhythm on play)
-  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Handle URL timestamp param on mount or update
   useEffect(() => {
@@ -137,10 +183,13 @@ export default function MeetingDetailPage({
 
   // Seeking helper
   const handleSeek = useCallback(
-    (seconds: number) => {
+    (seconds: number, autoPlay: boolean = false) => {
       if (!meeting) return;
       const target = Math.max(0, Math.min(seconds, meeting.duration));
       setCurrentTime(target);
+      if (autoPlay) {
+        setIsPlaying(true);
+      }
     },
     [meeting]
   );
@@ -148,7 +197,6 @@ export default function MeetingDetailPage({
   // Keyboard shortcuts (Space: play/pause, J/Left: -10s, L/Right: +10s)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept when typing in an input
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -227,14 +275,67 @@ export default function MeetingDetailPage({
     navigator.clipboard.writeText(url);
     setCopiedClip(true);
     setTimeout(() => setCopiedClip(false), 2000);
+    showToast("Shareable link copied to clipboard");
   };
 
-  // Add Action Item
+  // Copy Quote to Clipboard
+  const handleCopyQuote = (seg: TranscriptSegment) => {
+    const text = `"${seg.text}" — ${seg.speakerName} (${formatTime(seg.startTime)})`;
+    navigator.clipboard.writeText(text);
+    setCopiedQuoteId(seg.id);
+    showToast("Quote copied to clipboard");
+    setTimeout(() => setCopiedQuoteId(null), 2000);
+  };
+
+  // Toggle Highlight on a Transcript Segment
+  const handleToggleSegmentHighlight = (seg: TranscriptSegment) => {
+    if (!meeting) return;
+    const added = toggleSegmentHighlight(meeting.id, seg, "Key Point", "yellow");
+    if (added) {
+      showToast(`⭐ Highlight added at ${formatTime(seg.startTime)}`);
+    } else {
+      showToast(`Highlight removed`);
+    }
+  };
+
+  // Template Switch Handler with realistic AI generation feel
+  const handleSelectTemplate = (templateId: string) => {
+    if (!meeting) return;
+    setIsSwitchingTemplate(true);
+    setTimeout(() => {
+      setSummaryTemplate(meeting.id, templateId);
+      setIsSwitchingTemplate(false);
+      showToast(`Template changed to ${templateId.replace("_", " ")}`);
+    }, 280);
+  };
+
+  // Add Action Item Handler
   const handleAddAction = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newActionText.trim() || !meeting) return;
-    addActionItem(meeting.id, newActionText.trim(), Math.floor(currentTime));
+
+    let assignee: { name: string; avatar: string } | undefined = undefined;
+    if (newActionAssigneeId !== "none") {
+      const selectedSpeaker = meeting.speakers.find((s) => s.id === newActionAssigneeId);
+      if (selectedSpeaker) {
+        assignee = {
+          name: selectedSpeaker.name,
+          avatar: selectedSpeaker.avatar,
+        };
+      }
+    }
+
+    const payload: AddActionItemParams = {
+      text: newActionText.trim(),
+      timestamp: Math.floor(currentTime),
+      assignee,
+      dueDate: newActionDueDate,
+      priority: newActionPriority,
+    };
+
+    addActionItem(meeting.id, payload);
     setNewActionText("");
+    showToast("Action item created successfully");
   };
 
   if (!meeting) {
@@ -257,6 +358,7 @@ export default function MeetingDetailPage({
   const catColor = getCategoryBadgeColor(meeting.category);
   const activeSegment = meeting.transcript[activeSegmentIndex] || meeting.transcript[0];
 
+  // Filter Transcript
   const filteredTranscript = meeting.transcript.filter((seg) => {
     if (!transcriptSearch.trim()) return true;
     const q = transcriptSearch.toLowerCase();
@@ -266,8 +368,32 @@ export default function MeetingDetailPage({
     );
   });
 
+  // Filter Action Items
+  const filteredActionItems = meeting.actionItems.filter((act) => {
+    if (actionFilterStatus === "open" && act.completed) return false;
+    if (actionFilterStatus === "completed" && !act.completed) return false;
+    if (
+      actionFilterAssignee !== "all" &&
+      act.assignee?.name !== actionFilterAssignee
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const openActionCount = meeting.actionItems.filter((a) => !a.completed).length;
+  const completedActionCount = meeting.actionItems.filter((a) => a.completed).length;
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-slate-950">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-indigo-500/40 text-xs font-semibold text-indigo-200 shadow-xl shadow-black/50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 1. Header Bar */}
       <header className="px-6 py-3.5 bg-slate-950 border-b border-slate-850 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
@@ -474,12 +600,12 @@ export default function MeetingDetailPage({
               }}
             />
 
-            {/* AI Highlight Pins on Track */}
+            {/* AI / User Highlight Pins on Track */}
             {meeting.highlights.map((hl) => (
               <div
                 key={hl.id}
-                title={`${hl.label}: ${hl.text}`}
-                className="absolute top-0 bottom-0 w-1.5 bg-amber-400 z-10 shadow-sm"
+                title={`⭐ ${hl.label}: ${hl.text}`}
+                className="absolute top-0 bottom-0 w-2 bg-amber-400 z-10 shadow-md shadow-amber-500/50 hover:scale-125 transition-transform"
                 style={{
                   left: `${(hl.startTime / meeting.duration) * 100}%`,
                 }}
@@ -512,14 +638,15 @@ export default function MeetingDetailPage({
               icon: MessageSquare,
             },
             {
-              id: "actions",
-              label: `Action Items (${meeting.actionItems.length})`,
-              icon: CheckCircle2,
-            },
-            {
               id: "highlights",
               label: `Highlights (${meeting.highlights.length})`,
-              icon: Highlighter,
+              icon: Star,
+              highlightBadge: meeting.highlights.length > 0,
+            },
+            {
+              id: "actions",
+              label: `Action Items (${openActionCount} open)`,
+              icon: CheckCircle2,
             },
             {
               id: "split",
@@ -539,54 +666,115 @@ export default function MeetingDetailPage({
                     : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon
+                  className={`h-3.5 w-3.5 ${
+                    tab.id === "highlights" && meeting.highlights.length > 0
+                      ? "text-amber-400 fill-amber-400"
+                      : ""
+                  }`}
+                />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Template Selector on Overview */}
-        {activeTab === "overview" && meeting.availableSummaries && (
-          <div className="flex items-center gap-2 text-xs py-1">
-            <span className="text-slate-400 font-medium hidden sm:inline">
-              Template:
-            </span>
-            <select
-              value={meeting.summary.templateId}
-              onChange={(e) => setSummaryTemplate(meeting.id, e.target.value)}
-              className="bg-slate-900 text-xs font-semibold text-slate-200 border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer"
-            >
-              <option value="default">Executive Overview</option>
-              <option value="sales_meddic">MEDDIC Sales Discovery</option>
-              <option value="eng_sprint">Engineering Sprint</option>
-              <option value="one_on_one">1-on-1 Sync</option>
-              <option value="user_research">User Research</option>
-            </select>
-          </div>
-        )}
+        {/* Quick Keyboard shortcut prompt */}
+        <button
+          onClick={() => setIsShortcutsOpen(true)}
+          className="text-[11px] text-slate-500 hover:text-slate-300 font-mono hidden md:flex items-center gap-1 px-2 py-1 rounded bg-slate-900/60 border border-slate-800"
+        >
+          <span>Press</span>
+          <kbd className="text-[10px] px-1 bg-slate-800 rounded text-slate-300">?</kbd>
+          <span>for shortcuts</span>
+        </button>
       </div>
 
       {/* 4. Tab Content Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-slate-950">
         {/* ========================================================= */}
-        {/* TAB 1: OVERVIEW                                           */}
+        {/* TAB 1: OVERVIEW & TEMPLATES                               */}
         {/* ========================================================= */}
         {activeTab === "overview" && (
           <div className="max-w-5xl mx-auto space-y-6">
+            {/* Template Selector Bar */}
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <Sparkles className="h-4 w-4 text-indigo-400" />
+                  <span>AI Summary Template Format</span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Switch template to re-structure AI takeaways
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                {AVAILABLE_TEMPLATES.map((tmpl) => {
+                  const Icon = TEMPLATE_ICONS[tmpl.id] || Sparkles;
+                  const isCurrent =
+                    meeting.summary.templateId === tmpl.id ||
+                    (tmpl.id === "general" && meeting.summary.templateId === "default") ||
+                    (tmpl.id === "sales" && meeting.summary.templateId === "sales_meddic") ||
+                    (tmpl.id === "customer_success" && meeting.summary.templateId === "user_research") ||
+                    (tmpl.id === "engineering" && meeting.summary.templateId === "eng_sprint") ||
+                    (tmpl.id === "interview" && meeting.summary.templateId === "interview_scorecard");
+
+                  return (
+                    <button
+                      key={tmpl.id}
+                      onClick={() => handleSelectTemplate(tmpl.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all duration-150 flex flex-col gap-1.5 ${
+                        isCurrent
+                          ? "bg-indigo-600/20 border-indigo-500 shadow-md shadow-indigo-600/10"
+                          : "bg-slate-950/60 border-slate-850 hover:bg-slate-900 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Icon
+                          className={`h-4 w-4 ${
+                            isCurrent ? "text-indigo-400" : "text-slate-400"
+                          }`}
+                        />
+                        {isCurrent && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-xs font-bold truncate ${
+                            isCurrent ? "text-white" : "text-slate-300"
+                          }`}
+                        >
+                          {tmpl.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {tmpl.badge}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* AI Summary Banner */}
-            <div className="p-5 rounded-2xl glass-card border-indigo-500/30 space-y-2.5">
+            <div
+              className={`p-6 rounded-2xl glass-card border-indigo-500/30 space-y-3 transition-opacity duration-200 ${
+                isSwitchingTemplate ? "opacity-40" : "opacity-100"
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-300">
                   <Sparkles className="h-4 w-4 text-indigo-400" />
                   <span>AI Executive Summary</span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400">
-                  Template: {meeting.summary.templateName}
+                <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                  {meeting.summary.templateName}
                 </span>
               </div>
 
-              <h2 className="text-base font-bold text-white leading-snug">
+              <h2 className="text-lg font-bold text-white leading-snug">
                 {meeting.summary.headline}
               </h2>
               <p className="text-xs text-slate-300 leading-relaxed pt-1">
@@ -594,43 +782,45 @@ export default function MeetingDetailPage({
               </p>
             </div>
 
-            {/* Key Topics (3-6 Structured Sections) */}
+            {/* Key Topics (Structured Discussion Sections) */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Key Topics & Discussion Pillars</span>
+                <span>Key Topics & Structured Pillars</span>
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {meeting.summary.sections.map((sec) => (
                   <div
                     key={sec.id}
-                    className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5"
+                    className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5 flex flex-col justify-between"
                   >
-                    <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide">
-                      {sec.title}
-                    </h4>
-                    <ul className="space-y-2">
-                      {sec.bullets.map((bullet, idx) => (
-                        <li
-                          key={idx}
-                          className="text-xs text-slate-300 flex items-start gap-2 leading-relaxed"
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide mb-2">
+                        {sec.title}
+                      </h4>
+                      <ul className="space-y-2">
+                        {sec.bullets.map((bullet, idx) => (
+                          <li
+                            key={idx}
+                            className="text-xs text-slate-300 flex items-start gap-2 leading-relaxed"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
 
                     {/* Citations with Click-to-Seek */}
                     {sec.citations && sec.citations.length > 0 && (
-                      <div className="pt-2 mt-2 border-t border-slate-800/80 flex flex-wrap gap-1.5">
+                      <div className="pt-3 mt-3 border-t border-slate-800/80 flex flex-wrap gap-1.5">
                         {sec.citations.map((cite, ci) => (
                           <button
                             key={ci}
-                            onClick={() => handleSeek(cite.timestamp)}
+                            onClick={() => handleSeek(cite.timestamp, true)}
                             className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-colors"
-                            title={`Jump to ${formatTime(cite.timestamp)}`}
+                            title={`Jump to audio at ${formatTime(cite.timestamp)}`}
                           >
                             <Clock className="h-3 w-3" />
                             <span>{formatTime(cite.timestamp)}</span>
@@ -644,14 +834,14 @@ export default function MeetingDetailPage({
             </div>
 
             {/* Key Decisions */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5">
+            <div className="p-5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
               <div className="flex items-center gap-2">
                 <Flame className="h-4 w-4 text-emerald-400" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                   Key Decisions Agreed Upon
                 </h3>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {meeting.summary.keyDecisions.map((decision, idx) => (
                   <li
                     key={idx}
@@ -673,9 +863,9 @@ export default function MeetingDetailPage({
                 </h3>
                 <button
                   onClick={() => setActiveTab("actions")}
-                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300"
+                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
                 >
-                  Manage All →
+                  Manage All ({openActionCount} open) →
                 </button>
               </div>
 
@@ -703,7 +893,7 @@ export default function MeetingDetailPage({
                       </p>
                       <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-850 text-[11px]">
                         <button
-                          onClick={() => handleSeek(act.timestamp)}
+                          onClick={() => handleSeek(act.timestamp, true)}
                           className="font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
                         >
                           <Clock className="h-3 w-3" />
@@ -731,12 +921,12 @@ export default function MeetingDetailPage({
         )}
 
         {/* ========================================================= */}
-        {/* TAB 2: TRANSCRIPT (Full View)                             */}
+        {/* TAB 2: TRANSCRIPT (With Hover Highlights & Visual States)  */}
         {/* ========================================================= */}
         {activeTab === "transcript" && (
           <div className="max-w-4xl mx-auto space-y-4">
             {/* Search Filter Header */}
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-4 sticky top-0 z-10">
+            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-4 sticky top-0 z-10 shadow-lg shadow-black/20">
               <div className="flex-1 max-w-md">
                 <Input
                   icon={<Search className="h-3.5 w-3.5 text-slate-500" />}
@@ -746,37 +936,105 @@ export default function MeetingDetailPage({
                   className="py-1.5 text-xs"
                 />
               </div>
-              <span className="text-xs font-mono text-slate-400">
-                {filteredTranscript.length} / {meeting.transcript.length} turns
-              </span>
+              <div className="flex items-center gap-3 text-xs text-slate-400">
+                <span className="hidden sm:inline">
+                  Hover turn to highlight ⭐
+                </span>
+                <span className="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800">
+                  {filteredTranscript.length} turns
+                </span>
+              </div>
             </div>
 
             {/* Transcript Stream */}
-            <div
-              ref={transcriptContainerRef}
-              className="space-y-3 pb-12"
-            >
-              {filteredTranscript.map((seg, idx) => {
+            <div ref={transcriptContainerRef} className="space-y-3 pb-12">
+              {filteredTranscript.map((seg) => {
                 const isActive =
                   currentTime >= seg.startTime && currentTime <= seg.endTime;
+                const isHighlighted = Boolean(
+                  seg.highlightId ||
+                    meeting.highlights.some(
+                      (h) =>
+                        h.segmentId === seg.id ||
+                        h.id === seg.highlightId ||
+                        (Math.abs(h.startTime - seg.startTime) < 0.5 &&
+                          h.text === seg.text)
+                    )
+                );
+
                 return (
                   <div
                     key={seg.id}
                     ref={isActive ? activeSegmentRef : null}
                     onClick={() => handleSeek(seg.startTime)}
-                    className={`p-4 rounded-xl cursor-pointer transition-all duration-200 border ${
-                      isActive
+                    className={`relative p-4 rounded-xl cursor-pointer transition-all duration-200 border group ${
+                      isHighlighted
+                        ? "border-l-4 border-l-amber-400 bg-amber-500/[0.04] border-slate-800 hover:border-amber-400/50"
+                        : isActive
                         ? "bg-indigo-600/15 border-indigo-500/50 shadow-md shadow-indigo-600/10"
                         : "bg-slate-900/50 border-slate-800/80 hover:bg-slate-900/80 hover:border-slate-700"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <div className="flex items-center gap-2">
+                    {/* Floating Hover Action Bar */}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-slate-900/95 backdrop-blur-md border border-slate-750 p-1 rounded-lg shadow-xl z-10"
+                    >
+                      {/* Highlight Toggle Button */}
+                      <button
+                        onClick={() => handleToggleSegmentHighlight(seg)}
+                        className={`px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors ${
+                          isHighlighted
+                            ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                            : "text-slate-300 hover:text-amber-300 hover:bg-slate-800"
+                        }`}
+                        title={isHighlighted ? "Remove highlight" : "Highlight this segment"}
+                      >
+                        <Star
+                          className={`h-3.5 w-3.5 ${
+                            isHighlighted ? "fill-amber-400 text-amber-400" : ""
+                          }`}
+                        />
+                        <span>{isHighlighted ? "Highlighted" : "Highlight"}</span>
+                      </button>
+
+                      {/* Copy Quote Button */}
+                      <button
+                        onClick={() => handleCopyQuote(seg)}
+                        className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                        title="Copy quote and timestamp"
+                      >
+                        {copiedQuoteId === seg.id ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+
+                      {/* Share Clip Button */}
+                      <button
+                        onClick={() => handleOpenClipModal(seg.startTime, seg.endTime)}
+                        className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded transition-colors"
+                        title="Share clip of this turn"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Segment Header */}
+                    <div className="flex items-center justify-between gap-2 mb-2 pr-28 group-hover:pr-36 transition-all">
+                      <div className="flex items-center gap-2.5">
                         <Avatar
                           name={seg.speakerName}
                           src={seg.speakerAvatar}
                           size="sm"
-                          className={isActive ? "ring-2 ring-indigo-400" : ""}
+                          className={
+                            isActive
+                              ? "ring-2 ring-indigo-400"
+                              : isHighlighted
+                              ? "ring-2 ring-amber-400/50"
+                              : ""
+                          }
                         />
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -793,31 +1051,32 @@ export default function MeetingDetailPage({
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {isHighlighted && (
+                          <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center gap-1">
+                            <Star className="h-2.5 w-2.5 fill-amber-400" />
+                            <span>Saved</span>
+                          </span>
+                        )}
                         <span
                           className={`text-[11px] font-mono px-2 py-0.5 rounded ${
                             isActive
                               ? "bg-indigo-500 text-white font-bold"
+                              : isHighlighted
+                              ? "bg-amber-400/20 text-amber-300 font-semibold"
                               : "bg-slate-800 text-indigo-300"
                           }`}
                         >
                           {formatTime(seg.startTime)}
                         </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenClipModal(seg.startTime, seg.endTime);
-                          }}
-                          className="p-1 text-slate-400 hover:text-indigo-300 transition-colors"
-                          title="Share Clip of this moment"
-                        >
-                          <Share2 className="h-3.5 w-3.5" />
-                        </button>
                       </div>
                     </div>
 
+                    {/* Segment Body */}
                     <p
-                      className={`text-xs leading-relaxed pl-9 ${
-                        isActive
+                      className={`text-xs leading-relaxed pl-10 ${
+                        isHighlighted
+                          ? "text-slate-100 font-medium"
+                          : isActive
                           ? "text-slate-100 font-medium"
                           : "text-slate-300"
                       }`}
@@ -832,132 +1091,345 @@ export default function MeetingDetailPage({
         )}
 
         {/* ========================================================= */}
-        {/* TAB 3: ACTION ITEMS                                       */}
+        {/* TAB 3: HIGHLIGHTS SECTION                                 */}
+        {/* ========================================================= */}
+        {activeTab === "highlights" && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <span>Meeting Highlight Moments ({meeting.highlights.length})</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Click any highlight to jump immediately to that exact timestamp in playback.
+                </p>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setActiveTab("transcript")}
+                className="text-xs self-start sm:self-auto"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                <span>Highlight More from Transcript</span>
+              </Button>
+            </div>
+
+            {meeting.highlights.length === 0 ? (
+              <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 space-y-3">
+                <Star className="h-8 w-8 text-slate-600 mx-auto" />
+                <h4 className="text-sm font-semibold text-slate-300">
+                  No highlights saved yet
+                </h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Go to the Transcript tab, hover over any segment turn, and click{" "}
+                  <strong className="text-slate-300">⭐ Highlight</strong> to bookmark important quotes.
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setActiveTab("transcript")}
+                  className="text-xs"
+                >
+                  Go to Transcript
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {meeting.highlights.map((hl) => (
+                  <div
+                    key={hl.id}
+                    onClick={() => handleSeek(hl.startTime, true)}
+                    className="p-5 rounded-xl glass-card border-slate-800 hover:border-amber-400/50 cursor-pointer transition-all space-y-3 group relative overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-xs font-mono font-bold text-amber-300">
+                          {formatTime(hl.startTime)}
+                        </span>
+                        <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 ml-1">
+                          {hl.label}
+                        </span>
+                      </div>
+
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              `"${hl.text}" (${formatTime(hl.startTime)})`
+                            );
+                            showToast("Highlight quote copied");
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-200 rounded"
+                          title="Copy quote"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            deleteHighlight(meeting.id, hl.id);
+                            showToast("Highlight removed");
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-400 rounded"
+                          title="Remove highlight"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-200 group-hover:text-white leading-relaxed font-medium italic">
+                      &ldquo;{hl.text}&rdquo;
+                    </p>
+
+                    <div className="pt-2 border-t border-slate-850 flex items-center justify-between text-[11px] text-amber-400 font-semibold">
+                      <span>⭐ Jump to {formatTime(hl.startTime)}</span>
+                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 4: ACTION ITEMS                                       */}
         {/* ========================================================= */}
         {activeTab === "actions" && (
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* Add Action Item Form */}
+            {/* Action Item Creation Form */}
             <form
               onSubmit={handleAddAction}
-              className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center gap-3"
+              className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3.5 shadow-lg shadow-black/20"
             >
-              <div className="flex-1 w-full">
-                <Input
-                  placeholder="Type new action item task..."
-                  value={newActionText}
-                  onChange={(e) => setNewActionText(e.target.value)}
-                  className="py-1.5 text-xs"
-                />
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                  <CheckSquare className="h-4 w-4 text-indigo-400" />
+                  <span>Create Action Item / Task</span>
+                </span>
+                <span className="text-[11px] font-mono text-indigo-400">
+                  Source pinned to: {formatTime(currentTime)}
+                </span>
               </div>
-              <Button type="submit" variant="primary" size="sm" className="text-xs">
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                <span>Add Task</span>
-              </Button>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Describe task commitment (e.g., Deliver security review by Friday)..."
+                    value={newActionText}
+                    onChange={(e) => setNewActionText(e.target.value)}
+                    className="py-2 text-xs"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  {/* Assignee Dropdown */}
+                  <select
+                    value={newActionAssigneeId}
+                    onChange={(e) => setNewActionAssigneeId(e.target.value)}
+                    className="bg-slate-950 text-xs font-medium text-slate-200 border border-slate-800 rounded-lg px-2.5 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="none">Assignee: None</option>
+                    {meeting.speakers.map((spk) => (
+                      <option key={spk.id} value={spk.id}>
+                        {spk.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Due Date Presets */}
+                  <select
+                    value={newActionDueDate}
+                    onChange={(e) => setNewActionDueDate(e.target.value)}
+                    className="bg-slate-950 text-xs font-medium text-slate-200 border border-slate-800 rounded-lg px-2.5 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="Today">Due: Today</option>
+                    <option value="Tomorrow">Due: Tomorrow</option>
+                    <option value="This Week">Due: This Week</option>
+                    <option value="Next Monday">Due: Next Monday</option>
+                    <option value="In 2 Weeks">Due: In 2 Weeks</option>
+                  </select>
+
+                  {/* Priority */}
+                  <select
+                    value={newActionPriority}
+                    onChange={(e) => setNewActionPriority(e.target.value as any)}
+                    className="bg-slate-950 text-xs font-medium text-slate-200 border border-slate-800 rounded-lg px-2.5 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="high">High Priority</option>
+                    <option value="medium">Med Priority</option>
+                    <option value="low">Low Priority</option>
+                  </select>
+
+                  <Button type="submit" variant="primary" size="sm" className="text-xs whitespace-nowrap">
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <span>Add Task</span>
+                  </Button>
+                </div>
+              </div>
             </form>
 
-            {/* List */}
-            <div className="space-y-3">
-              {meeting.actionItems.map((act) => (
-                <div
-                  key={act.id}
-                  className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all flex items-start gap-3.5 group"
+            {/* Filter Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <button
+                  onClick={() => setActionFilterStatus("all")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    actionFilterStatus === "all"
+                      ? "bg-indigo-600 text-white"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={act.completed}
-                    onChange={() => toggleActionItem(meeting.id, act.id)}
-                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm font-medium leading-relaxed ${
-                        act.completed
-                          ? "line-through text-slate-500"
-                          : "text-slate-100"
-                      }`}
-                    >
-                      {act.text}
-                    </p>
+                  All ({meeting.actionItems.length})
+                </button>
+                <button
+                  onClick={() => setActionFilterStatus("open")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    actionFilterStatus === "open"
+                      ? "bg-indigo-600 text-white"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  }`}
+                >
+                  Open ({openActionCount})
+                </button>
+                <button
+                  onClick={() => setActionFilterStatus("completed")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    actionFilterStatus === "completed"
+                      ? "bg-indigo-600 text-white"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  }`}
+                >
+                  Completed ({completedActionCount})
+                </button>
+              </div>
 
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-850">
-                      <button
-                        onClick={() => handleSeek(act.timestamp)}
-                        className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 font-semibold"
+              {/* Filter by Assignee */}
+              <div className="flex items-center gap-2 self-end sm:self-auto text-xs">
+                <span className="text-slate-500">Filter Assignee:</span>
+                <select
+                  value={actionFilterAssignee}
+                  onChange={(e) => setActionFilterAssignee(e.target.value)}
+                  className="bg-slate-950 text-xs font-semibold text-slate-300 border border-slate-800 rounded-lg px-2.5 py-1 focus:outline-none"
+                >
+                  <option value="all">All Assignees</option>
+                  {meeting.speakers.map((spk) => (
+                    <option key={spk.id} value={spk.name}>
+                      {spk.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* List */}
+            {filteredActionItems.length === 0 ? (
+              <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800 space-y-2">
+                <CheckCircle2 className="h-8 w-8 text-slate-600 mx-auto" />
+                <h4 className="text-sm font-semibold text-slate-300">
+                  No action items match this filter
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Try switching filters or add a new action item using the form above.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredActionItems.map((act) => (
+                  <div
+                    key={act.id}
+                    className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex items-start gap-3.5 group"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={act.completed}
+                      onChange={() => toggleActionItem(meeting.id, act.id)}
+                      className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium leading-relaxed ${
+                          act.completed
+                            ? "line-through text-slate-500"
+                            : "text-slate-100"
+                        }`}
                       >
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>Verbal source: {formatTime(act.timestamp)}</span>
-                      </button>
+                        {act.text}
+                      </p>
 
-                      {act.assignee && (
-                        <div className="flex items-center gap-2">
-                          <Avatar
-                            name={act.assignee.name}
-                            src={act.assignee.avatar}
-                            size="xs"
-                          />
-                          <span className="text-xs text-slate-300 font-medium">
-                            {act.assignee.name}
-                          </span>
-                          <span className="text-[11px] text-slate-500">
-                            (Due: {act.dueDate})
-                          </span>
+                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-850 flex-wrap gap-2">
+                        <button
+                          onClick={() => handleSeek(act.timestamp, true)}
+                          className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 font-semibold"
+                        >
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>Verbal source: {formatTime(act.timestamp)}</span>
+                        </button>
+
+                        <div className="flex items-center gap-3">
+                          {act.priority && (
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                act.priority === "high"
+                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                                  : act.priority === "medium"
+                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                                  : "bg-slate-800 text-slate-400 border-slate-700"
+                              }`}
+                            >
+                              {act.priority}
+                            </span>
+                          )}
+
+                          {act.assignee && (
+                            <div className="flex items-center gap-1.5">
+                              <Avatar
+                                name={act.assignee.name}
+                                src={act.assignee.avatar}
+                                size="xs"
+                              />
+                              <span className="text-xs text-slate-300 font-medium">
+                                {act.assignee.name}
+                              </span>
+                            </div>
+                          )}
+
+                          {act.dueDate && (
+                            <span className="text-xs text-slate-400 font-mono">
+                              Due {act.dueDate}
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              deleteActionItem(meeting.id, act.id);
+                              showToast("Action item deleted");
+                            }}
+                            className="p-1 text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete task"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* ========================================================= */}
-        {/* TAB 4: HIGHLIGHTS                                         */}
-        {/* ========================================================= */}
-        {activeTab === "highlights" && (
-          <div className="max-w-4xl mx-auto space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Key Highlight Quotes ({meeting.highlights.length})
-              </h3>
-              <span className="text-xs text-slate-400">
-                Click quote to seek audio
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {meeting.highlights.map((hl) => (
-                <div
-                  key={hl.id}
-                  onClick={() => handleSeek(hl.startTime)}
-                  className="p-4 rounded-xl glass-card border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                      {hl.label}
-                    </span>
-                    <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatTime(hl.startTime)} - {formatTime(hl.endTime)}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-200 group-hover:text-white leading-relaxed font-medium italic">
-                    &ldquo;{hl.text}&rdquo;
-                  </p>
-
-                  <div className="pt-2 border-t border-slate-850 flex items-center justify-between text-[11px] text-indigo-400">
-                    <span>Jump to quote</span>
-                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================= */}
-        {/* TAB 5: SPLIT VIEW (Transcript + Overview Side-by-Side)    */}
+        {/* TAB 5: SPLIT VIEW (Transcript + Notes Side-by-Side)       */}
         {/* ========================================================= */}
         {activeTab === "split" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
@@ -975,12 +1447,25 @@ export default function MeetingDetailPage({
                 {meeting.transcript.map((seg) => {
                   const isActive =
                     currentTime >= seg.startTime && currentTime <= seg.endTime;
+                  const isHighlighted = Boolean(
+                    seg.highlightId ||
+                      meeting.highlights.some(
+                        (h) =>
+                          h.segmentId === seg.id ||
+                          h.id === seg.highlightId ||
+                          (Math.abs(h.startTime - seg.startTime) < 0.5 &&
+                            h.text === seg.text)
+                      )
+                  );
+
                   return (
                     <div
                       key={seg.id}
-                      onClick={() => handleSeek(seg.startTime)}
-                      className={`p-3 rounded-xl cursor-pointer border text-xs transition-all ${
-                        isActive
+                      onClick={() => handleSeek(seg.startTime, true)}
+                      className={`p-3 rounded-xl cursor-pointer border text-xs transition-all relative group ${
+                        isHighlighted
+                          ? "border-l-4 border-l-amber-400 bg-amber-500/[0.04] border-slate-800"
+                          : isActive
                           ? "bg-indigo-600/20 border-indigo-500/50 text-white font-medium"
                           : "bg-slate-900/40 border-slate-800 text-slate-300 hover:bg-slate-900/80"
                       }`}
@@ -989,9 +1474,14 @@ export default function MeetingDetailPage({
                         <span className="font-bold text-slate-200">
                           {seg.speakerName}
                         </span>
-                        <span className="text-[10px] font-mono text-indigo-400">
-                          {formatTime(seg.startTime)}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {isHighlighted && (
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                          )}
+                          <span className="text-[10px] font-mono text-indigo-400">
+                            {formatTime(seg.startTime)}
+                          </span>
+                        </div>
                       </div>
                       <p>{seg.text}</p>
                     </div>
@@ -1005,7 +1495,7 @@ export default function MeetingDetailPage({
               <div className="space-y-1.5 border-b border-slate-850 pb-3">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 uppercase">
                   <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Executive Notes</span>
+                  <span>Executive Notes • {meeting.summary.templateName}</span>
                 </div>
                 <h4 className="text-sm font-bold text-white">
                   {meeting.summary.headline}
@@ -1174,3 +1664,4 @@ export default function MeetingDetailPage({
     </div>
   );
 }
+
