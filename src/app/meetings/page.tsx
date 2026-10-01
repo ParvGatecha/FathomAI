@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Search,
   Calendar,
@@ -30,6 +30,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { MeetingCategory, Meeting } from "@/lib/types";
 
 function MeetingsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") as MeetingCategory | null;
 
@@ -283,7 +284,8 @@ function MeetingsContent() {
                     return (
                       <div
                         key={meeting.id}
-                        className="group p-4 rounded-2xl glass-card transition-all duration-200 hover:border-indigo-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        onClick={() => router.push(`/meetings/${meeting.id}`)}
+                        className="group p-4 rounded-2xl glass-card transition-all duration-200 hover:border-indigo-500/40 hover:bg-slate-900/80 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -307,11 +309,9 @@ function MeetingsContent() {
                             </span>
                           </div>
 
-                          <Link href={`/meetings/${meeting.id}`}>
-                            <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors">
-                              {meeting.title}
-                            </h3>
-                          </Link>
+                          <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors">
+                            {meeting.title}
+                          </h3>
 
                           <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                             {meeting.summary?.headline}
@@ -358,7 +358,10 @@ function MeetingsContent() {
                           )}
 
                           <button
-                            onClick={() => toggleFavorite(meeting.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(meeting.id);
+                            }}
                             className="p-1.5 text-slate-400 hover:text-amber-400 transition-colors"
                             title="Favorite Call"
                           >
@@ -371,16 +374,18 @@ function MeetingsContent() {
                             />
                           </button>
 
-                          <Link href={`/meetings/${meeting.id}`}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="text-xs group-hover:bg-indigo-600 group-hover:text-white transition-all"
-                            >
-                              <Play className="h-3 w-3 fill-current mr-1" />
-                              <span>Review</span>
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/meetings/${meeting.id}`);
+                            }}
+                            className="text-xs group-hover:bg-indigo-600 group-hover:text-white transition-all"
+                          >
+                            <Play className="h-3 w-3 fill-current mr-1" />
+                            <span>Review</span>
+                          </Button>
                         </div>
                       </div>
                     );
@@ -394,7 +399,8 @@ function MeetingsContent() {
                     return (
                       <div
                         key={meeting.id}
-                        className="p-5 rounded-2xl glass-card transition-all duration-200 hover:border-indigo-500/40 flex flex-col justify-between space-y-4 group"
+                        onClick={() => router.push(`/meetings/${meeting.id}`)}
+                        className="p-5 rounded-2xl glass-card transition-all duration-200 hover:border-indigo-500/40 hover:bg-slate-900/80 cursor-pointer flex flex-col justify-between space-y-4 group"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -404,7 +410,10 @@ function MeetingsContent() {
                               {meeting.category}
                             </span>
                             <button
-                              onClick={() => toggleFavorite(meeting.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(meeting.id);
+                              }}
                               className="text-slate-400 hover:text-amber-400"
                             >
                               <Star
@@ -417,11 +426,9 @@ function MeetingsContent() {
                             </button>
                           </div>
 
-                          <Link href={`/meetings/${meeting.id}`}>
-                            <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2">
-                              {meeting.title}
-                            </h3>
-                          </Link>
+                          <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2">
+                            {meeting.title}
+                          </h3>
 
                           <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                             {meeting.summary?.headline}
@@ -441,12 +448,18 @@ function MeetingsContent() {
                             ))}
                           </div>
 
-                          <Link href={`/meetings/${meeting.id}`}>
-                            <Button variant="glass" size="sm" className="text-xs">
-                              <Play className="h-3 w-3 fill-current mr-1" />
-                              <span>Review</span>
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="glass"
+                            size="sm"
+                            className="text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/meetings/${meeting.id}`);
+                            }}
+                          >
+                            <Play className="h-3 w-3 fill-current mr-1" />
+                            <span>Review</span>
+                          </Button>
                         </div>
                       </div>
                     );

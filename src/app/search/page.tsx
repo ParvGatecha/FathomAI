@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { SearchResultMatch } from "@/lib/types";
 
 function SearchContent() {
@@ -237,9 +238,7 @@ function SearchContent() {
 
         {aiAnswer && (
           <div className="p-5 rounded-xl bg-slate-950/90 border border-indigo-500/30 space-y-4 animate-in fade-in">
-            <p className="text-xs text-slate-200 leading-relaxed font-medium whitespace-pre-wrap">
-              {aiAnswer.text}
-            </p>
+            <MarkdownRenderer content={aiAnswer.text} />
 
             {aiAnswer.citations.length > 0 && (
               <div className="pt-3 border-t border-slate-800/80 space-y-2">

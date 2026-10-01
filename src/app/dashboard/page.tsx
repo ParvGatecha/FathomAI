@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Clock,
   Video,
@@ -37,6 +38,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Meeting } from "@/lib/types";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { meetings, toggleActionItem, toggleFavorite } = useMeetingsStore();
 
   const greeting = getGreeting();
@@ -238,7 +240,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Link
             href="/meetings/meet-1"
-            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-indigo-500/40 hover:border-indigo-500/80 transition-all group relative overflow-hidden"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-indigo-500/40 hover:border-indigo-500/80 transition-all group relative overflow-hidden block cursor-pointer"
           >
             <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
               <span className="font-bold text-amber-400 flex items-center gap-1">
@@ -257,7 +259,7 @@ export default function DashboardPage() {
 
           <Link
             href="/meetings/meet-2"
-            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition-all group"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition-all group block cursor-pointer"
           >
             <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
               <span className="font-bold text-emerald-400">SALES & MEDDIC</span>
@@ -273,7 +275,7 @@ export default function DashboardPage() {
 
           <Link
             href="/meetings/meet-3"
-            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all group"
+            className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all group block cursor-pointer"
           >
             <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
               <span className="font-bold text-blue-400">ENGINEERING ARCH</span>
@@ -310,7 +312,8 @@ export default function DashboardPage() {
               return (
                 <div
                   key={meeting.id}
-                  className="p-5 rounded-2xl glass-card border-indigo-500/30 hover:border-indigo-500/60 transition-all duration-200 flex flex-col justify-between space-y-4 group"
+                  onClick={() => router.push(`/meetings/${meeting.id}`)}
+                  className="p-5 rounded-2xl glass-card border-indigo-500/30 hover:border-indigo-500/60 hover:bg-slate-900/80 cursor-pointer transition-all duration-200 flex flex-col justify-between space-y-4 group"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -329,11 +332,9 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <Link href={`/meetings/${meeting.id}`}>
-                      <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
-                        {meeting.title}
-                      </h3>
-                    </Link>
+                    <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
+                      {meeting.title}
+                    </h3>
 
                     <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                       {meeting.summary?.headline}
@@ -358,12 +359,18 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <Link href={`/meetings/${meeting.id}`}>
-                      <Button variant="primary" size="sm" className="text-xs">
-                        <Play className="h-3 w-3 fill-current mr-1" />
-                        <span>Review Call</span>
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/meetings/${meeting.id}`);
+                      }}
+                    >
+                      <Play className="h-3 w-3 fill-current mr-1" />
+                      <span>Review Call</span>
+                    </Button>
                   </div>
                 </div>
               );
@@ -402,7 +409,8 @@ export default function DashboardPage() {
               return (
                 <div
                   key={meeting.id}
-                  className="group p-4 rounded-2xl glass-card transition-all duration-200 hover:border-slate-750 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  onClick={() => router.push(`/meetings/${meeting.id}`)}
+                  className="group p-4 rounded-2xl glass-card transition-all duration-200 hover:border-indigo-500/40 hover:bg-slate-900/80 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -421,11 +429,9 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <Link href={`/meetings/${meeting.id}`}>
-                      <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-1">
-                        {meeting.title}
-                      </h3>
-                    </Link>
+                    <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-1">
+                      {meeting.title}
+                    </h3>
 
                     <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                       {meeting.summary?.headline}
@@ -461,7 +467,10 @@ export default function DashboardPage() {
                     )}
 
                     <button
-                      onClick={() => toggleFavorite(meeting.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(meeting.id);
+                      }}
                       className="p-1.5 text-slate-400 hover:text-amber-400 transition-colors"
                       title="Favorite Call"
                     >
@@ -474,16 +483,18 @@ export default function DashboardPage() {
                       />
                     </button>
 
-                    <Link href={`/meetings/${meeting.id}`}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="text-xs group-hover:bg-indigo-600 group-hover:text-white transition-all"
-                      >
-                        <Play className="h-3 w-3 fill-current mr-1" />
-                        <span>Open</span>
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/meetings/${meeting.id}`);
+                      }}
+                      className="text-xs group-hover:bg-indigo-600 group-hover:text-white transition-all"
+                    >
+                      <Play className="h-3 w-3 fill-current mr-1" />
+                      <span>Open</span>
+                    </Button>
                   </div>
                 </div>
               );
@@ -513,26 +524,28 @@ export default function DashboardPage() {
                 allPendingActions.slice(0, 5).map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 rounded-xl bg-slate-950/60 border border-slate-850 hover:border-slate-700 transition-all flex items-start gap-2.5 group"
+                    onClick={() => router.push(`/meetings/${item.meetingId}?t=${item.timestamp}`)}
+                    className="p-3 rounded-xl bg-slate-950/60 border border-slate-850 hover:border-indigo-500/40 hover:bg-slate-900/50 transition-all flex items-start gap-2.5 group cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={item.completed}
-                      onChange={() => toggleActionItem(item.meetingId, item.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleActionItem(item.meetingId, item.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                       className="mt-1 h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-200 font-medium leading-snug">
+                      <p className="text-xs text-slate-200 font-medium leading-snug group-hover:text-indigo-200 transition-colors">
                         {item.text}
                       </p>
                       <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-850">
-                        <Link
-                          href={`/meetings/${item.meetingId}?t=${item.timestamp}`}
-                          className="text-[10px] font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                        >
+                        <span className="text-[10px] font-mono text-indigo-400 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatTime(item.timestamp)}
-                        </Link>
+                        </span>
                         {item.assignee && (
                           <div className="flex items-center gap-1">
                             <Avatar

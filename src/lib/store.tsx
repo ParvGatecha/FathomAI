@@ -5,7 +5,7 @@ import { Meeting, ActionItem, Highlight, SearchResultMatch, TranscriptSegment } 
 import { SEED_MEETINGS } from "./seed-data";
 import { generateSummaryForTemplate } from "./templates";
 
-const STORAGE_KEY = "fathom_meetings_v1";
+const STORAGE_KEY = "fathom_meetings_v2";
 
 export interface AddActionItemParams {
   text: string;
@@ -61,7 +61,17 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMeetings(parsed);
+          // Ensure flagship meeting (meet-1) always stays up to date with the latest 194-segment transcript
+          const storedMeet1 = parsed.find((m: Meeting) => m.id === "meet-1");
+          const seedMeet1 = SEED_MEETINGS.find((m) => m.id === "meet-1");
+          let finalMeetings = parsed;
+          if (seedMeet1 && (!storedMeet1 || !storedMeet1.transcript || storedMeet1.transcript.length < 50)) {
+            finalMeetings = parsed.map((m: Meeting) => (m.id === "meet-1" ? seedMeet1 : m));
+            if (!finalMeetings.some((m: Meeting) => m.id === "meet-1")) {
+              finalMeetings = [seedMeet1, ...finalMeetings];
+            }
+          }
+          setMeetings(finalMeetings);
         } else {
           setMeetings(SEED_MEETINGS);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_MEETINGS));
@@ -87,7 +97,7 @@ export function MeetingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getMeeting = useCallback(
-    (id: string) => meetings.find((m) => m.id === id),
+    (id: string) => meetings.find((m) => m.id === id) || SEED_MEETINGS.find((m) => m.id === id),
     [meetings]
   );
 

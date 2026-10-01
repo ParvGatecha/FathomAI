@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useCallback,
   use,
+  Suspense,
 } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -68,6 +69,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { Meeting, TranscriptSegment, ActionItem, Highlight, Speaker } from "@/lib/types";
 import { encodeClipToken } from "@/lib/clips";
 
@@ -89,7 +91,7 @@ export interface MeetingChatMessage {
   citations?: GroundedCitation[];
 }
 
-export default function MeetingDetailPage({
+function MeetingDetailContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -320,21 +322,21 @@ export default function MeetingDetailPage({
     const md = `# ${meeting.title}
 **Date:** ${formatDate(meeting.date)} | **Duration:** ${formatDuration(meeting.duration)}
 **Category:** ${meeting.category} | **Platform:** ${meeting.platform}
-**Participants:** ${meeting.speakers.map((s) => `${s.name} (${s.role})`).join(", ")}
+**Participants:** ${(meeting.speakers || []).map((s) => `${s.name} (${s.role})`).join(", ")}
 
-## Executive Summary (${meeting.summary.templateName})
+## Executive Summary (${meeting.summary?.templateName || "Standard"})
 ${meeting.summary?.headline || ""}
 
 ${meeting.summary?.overview || ""}
 
 ## Key Decisions
-${meeting.summary?.keyDecisions.map((d) => `- ${d}`).join("\n") || "- None recorded"}
+${(meeting.summary?.keyDecisions || []).map((d) => `- ${d}`).join("\n") || "- None recorded"}
 
 ## Action Items
-${meeting.actionItems.map((a) => `- [${a.completed ? "x" : " "}] ${a.text} (${a.assignee?.name || "Unassigned"}, Due: ${a.dueDate || "This week"})`).join("\n")}
+${(meeting.actionItems || []).map((a) => `- [${a.completed ? "x" : " "}] ${a.text} (${a.assignee?.name || "Unassigned"}, Due: ${a.dueDate || "This week"})`).join("\n")}
 
 ## Key Discussion Topics
-${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
+${(meeting.summary?.nextSteps || []).map((s) => `- ${s}`).join("\n") || ""}
 `;
     navigator.clipboard.writeText(md);
     setCopiedNotes(true);
@@ -880,12 +882,12 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
                 {AVAILABLE_TEMPLATES.map((tmpl) => {
                   const Icon = TEMPLATE_ICONS[tmpl.id] || Sparkles;
                   const isCurrent =
-                    meeting.summary.templateId === tmpl.id ||
-                    (tmpl.id === "general" && meeting.summary.templateId === "default") ||
-                    (tmpl.id === "sales" && meeting.summary.templateId === "sales_meddic") ||
-                    (tmpl.id === "customer_success" && meeting.summary.templateId === "user_research") ||
-                    (tmpl.id === "engineering" && meeting.summary.templateId === "eng_sprint") ||
-                    (tmpl.id === "interview" && meeting.summary.templateId === "interview_scorecard");
+                    meeting.summary?.templateId === tmpl.id ||
+                    (tmpl.id === "general" && meeting.summary?.templateId === "default") ||
+                    (tmpl.id === "sales" && meeting.summary?.templateId === "sales_meddic") ||
+                    (tmpl.id === "customer_success" && meeting.summary?.templateId === "user_research") ||
+                    (tmpl.id === "engineering" && meeting.summary?.templateId === "eng_sprint") ||
+                    (tmpl.id === "interview" && meeting.summary?.templateId === "interview_scorecard");
 
                   return (
                     <button
@@ -937,15 +939,15 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
                   <span>AI Executive Summary</span>
                 </div>
                 <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                  {meeting.summary.templateName}
+                  {meeting.summary?.templateName || "Standard"}
                 </span>
               </div>
 
               <h2 className="text-lg font-bold text-white leading-snug">
-                {meeting.summary.headline}
+                {meeting.summary?.headline || ""}
               </h2>
               <p className="text-xs text-slate-300 leading-relaxed pt-1">
-                {meeting.summary.overview}
+                {meeting.summary?.overview || ""}
               </p>
             </div>
 
@@ -957,7 +959,7 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {meeting.summary.sections.map((sec) => (
+                {(meeting.summary?.sections || []).map((sec) => (
                   <div
                     key={sec.id}
                     className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5 flex flex-col justify-between"
@@ -967,7 +969,7 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
                         {sec.title}
                       </h4>
                       <ul className="space-y-2">
-                        {sec.bullets.map((bullet, idx) => (
+                        {(sec.bullets || []).map((bullet, idx) => (
                           <li
                             key={idx}
                             className="text-xs text-slate-300 flex items-start gap-2 leading-relaxed"
@@ -1009,7 +1011,7 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
                 </h3>
               </div>
               <ul className="space-y-2.5">
-                {meeting.summary.keyDecisions.map((decision, idx) => (
+                {(meeting.summary?.keyDecisions || []).map((decision, idx) => (
                   <li
                     key={idx}
                     className="text-xs text-slate-200 flex items-start gap-2.5 leading-relaxed font-medium"
@@ -1026,7 +1028,7 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Action Items & Commitments ({meeting.actionItems.length})</span>
+                  <span>Action Items & Commitments ({(meeting.actionItems || []).length})</span>
                 </h3>
                 <button
                   onClick={() => setActiveTab("actions")}
@@ -1691,8 +1693,14 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
                       <span className="font-mono">{msg.timestamp}</span>
                     </div>
 
-                    <div className="whitespace-pre-wrap font-sans text-xs space-y-2">
-                      {msg.text}
+                    <div className="text-xs">
+                      {msg.role === "assistant" ? (
+                        <MarkdownRenderer content={msg.text} />
+                      ) : (
+                        <p className="whitespace-pre-wrap leading-relaxed text-slate-100 font-medium">
+                          {msg.text}
+                        </p>
+                      )}
                     </div>
 
                     {/* Grounded Source Citations */}
@@ -1855,13 +1863,13 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
               <div className="space-y-1.5 border-b border-slate-850 pb-3">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 uppercase">
                   <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Executive Notes • {meeting.summary.templateName}</span>
+                  <span>Executive Notes • {meeting.summary?.templateName || "Standard"}</span>
                 </div>
                 <h4 className="text-sm font-bold text-white">
-                  {meeting.summary.headline}
+                  {meeting.summary?.headline || ""}
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  {meeting.summary.overview}
+                  {meeting.summary?.overview || ""}
                 </p>
               </div>
 
@@ -1870,7 +1878,7 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
                   Key Decisions
                 </h5>
                 <ul className="space-y-1.5">
-                  {meeting.summary.keyDecisions.map((dec, i) => (
+                  {(meeting.summary?.keyDecisions || []).map((dec, i) => (
                     <li
                       key={i}
                       className="text-xs text-slate-300 flex items-start gap-2"
@@ -1884,10 +1892,10 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
 
               <div className="space-y-2 pt-2 border-t border-slate-850">
                 <h5 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Action Items ({meeting.actionItems.length})
+                  Action Items ({(meeting.actionItems || []).length})
                 </h5>
                 <div className="space-y-2">
-                  {meeting.actionItems.map((act) => (
+                  {(meeting.actionItems || []).map((act) => (
                     <div
                       key={act.id}
                       className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2 text-xs"
@@ -2121,6 +2129,22 @@ ${meeting.summary?.nextSteps.map((s) => `- ${s}`).join("\n") || ""}
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function MeetingDetailPage(props: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-12 text-center text-slate-400">
+          Loading meeting intelligence...
+        </div>
+      }
+    >
+      <MeetingDetailContent {...props} />
+    </Suspense>
   );
 }
 
